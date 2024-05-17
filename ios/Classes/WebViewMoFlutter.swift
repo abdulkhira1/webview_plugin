@@ -80,7 +80,7 @@ class WebViewManager: NSObject {
         // webView = WKWebView()
          let configuration = WKWebViewConfiguration()
         configuration.preferences.setValue(true, forKey: "developerExtrasEnabled") // Enables the inspector
-         self.webView = WKWebView(frame: .zero)
+         self.webView = WKWebView(frame: .zero,configuration: configuration)
         webView.navigationDelegate = self
     }
 
