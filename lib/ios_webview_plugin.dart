@@ -69,9 +69,9 @@ class IosWebViewPlugin {
   // }
 
   static void getJavaScriptChannelStream(Function(String) callback) {
-    _onMessageReceivedStream ??= _eventChannel.receiveBroadcastStream().map<String>((event) {
+    _eventChannel.receiveBroadcastStream().listen((event) {
       callback(event.toString());
-      return event.toString();
+      // return event.toString();
     });
   }
 

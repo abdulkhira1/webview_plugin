@@ -57,12 +57,16 @@ public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHan
         }
     }
     
-    public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        print("Received message: \(message.name) with body: \(message.body)")
+    @objc public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+          print("Received message: \(message.name) with body: \(message.body)")
         if let messageBody = message.body as? String {
-            eventSink?(messageBody)
             print("Received message from JavaScript: \(messageBody)")
+            eventSink?(messageBody)
         }
+    }
+    
+    func sendMessageBody(body : String){
+        eventSink?(body)
     }
     
     func pageDidLoad() {
@@ -88,30 +92,38 @@ extension WebViewMoFlutterPlugin: FlutterStreamHandler {
 
 protocol WebViewControllerDelegate: AnyObject {
     func pageDidLoad()
+    
+    func sendMessageBody(body: String)
+    
 }
 
 class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     static let shared = WebViewManager()
     var webView: WKWebView!
     weak var delegate: WebViewControllerDelegate?
+    private var configuredJavaScriptChannels: Set<String> = []
+    
 
     override init() {
         super.init()
         let configuration = WKWebViewConfiguration()
+        configuration.preferences.javaScriptEnabled = true
         configuration.preferences.setValue(true, forKey: "developerExtrasEnabled")
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
     }
 
      func loadURL(_ urlString: String, withJavaScriptChannel javaScriptChannelName: String?, plugin: WKScriptMessageHandler) {
-        if let channelName = javaScriptChannelName {
-            webView.configuration.userContentController.add(plugin, name: channelName)
+         if javaScriptChannelName != nil {
+             addJavascriptChannel(name: javaScriptChannelName ?? "ChartAppDelegate")
         }
 
         guard let url = URL(string: urlString) else { return }
         if webView.url != url {
-            print("Loading URL: 1 \(urlString)")
+            print("Loading URL: \(urlString)")
             webView.load(URLRequest(url: url))
+        } else {
+            print("Load URL skipped as it's the same as the current URL")
         }
     }
 
@@ -130,10 +142,21 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         WKWebsiteDataStore.default().removeData(ofTypes: websiteDataTypes, modifiedSince: date, completionHandler: {})
     }
 
-    func addJavascriptChannel(name: String) {
-        // Make sure to add the script message handler for the specified channel name
-        webView.configuration.userContentController.add(self, name: name)
-    }
+    func addJavascriptChannel(name: String) -> Bool {
+            if configuredJavaScriptChannels.contains(name) {
+                return false
+            }
+            let wrapperSource = "window.\(name) = webkit.messageHandlers.\(name);"
+            let wrapperScript = WKUserScript(
+                source: wrapperSource,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false
+            )
+            webView.configuration.userContentController.addUserScript(wrapperScript)
+            webView.configuration.userContentController.add(self, name: name)
+        configuredJavaScriptChannels.insert(name)
+            return true
+        }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         delegate?.pageDidLoad()
@@ -143,9 +166,11 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
 
     // Implement WKScriptMessageHandler method
     @objc public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+          print("Received message: \(message.name) with body: \(message.body)")
         if let messageBody = message.body as? String {
-            delegate?.pageDidLoad()
             print("Received message from JavaScript: \(messageBody)")
+            delegate?.sendMessageBody(body: messageBody)
         }
     }
 }
+
