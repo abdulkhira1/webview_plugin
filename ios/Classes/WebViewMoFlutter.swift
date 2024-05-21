@@ -1,257 +1,176 @@
 import Flutter
 import UIKit
 import WebKit
+public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHandler, WebViewControllerDelegate {
+    private var webView: WKWebView?
+    private var channel: FlutterMethodChannel?
 
-// public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin {
-//     private var webView: WKWebView?
-    
-//     public static func register(with registrar: FlutterPluginRegistrar) {
-//         let channel = FlutterMethodChannel(name: "webview_mo_flutter", binaryMessenger: registrar.messenger())
-//         let instance = WebViewMoFlutterPlugin()
-//         registrar.addMethodCallDelegate(instance, channel: channel)
-//     }
-    
-//     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-//         switch call.method {
-
-//         case "loadUrl":
-//         if let args = call.arguments as? [String: Any],
-//            let initialUrl = args["initialUrl"] as? String {
-//             // let viewController = UIApplication.shared.keyWindow?.rootViewController
-//             // let webViewVC = ContentView(homeUrl: URL(string: initialUrl)!)
-//             // viewController?.present(UIHostingController(rootView: webViewVC), animated: true, completion: nil)
-
-//             // Use SceneDelegate.swift to load the WebView
-
-//             // let url = URL(string: initialUrl)!
-//             // if #available(iOS 14.0, *) {
-//             //     let contentView = ContentView(homeUrl: url)
-//             //     if let windowScene = scene as? UIWindowScene {W
-//             //         let window = UIWindow(windowScene: windowScene)
-//             //         window.rootViewController = UIHostingController(rootView: contentView)
-//             //         self.window = window
-//             //         window.makeKeyAndVisible()
-//             //     }
-//             // } else {
-//             //     // Fallback on earlier versions
-//             // }
-            
-//             WebViewMoFlutterPlugin.presentWebView(url: initialUrl)
-
-//             result(nil)
-//         } else {
-//             result(FlutterError(code: "INVALID_ARGUMENT",
-//                                 message: "Invalid argument for openWebView method",
-//                                 details: nil))
-//         }
-//         // case "loadUrl":
-//         //     if let args = call.arguments as? [String: Any],
-//         //          let url = args["url"] as String,
-//         //          {
-//         //         loadUrl(url)
-//         //         // result(nil)
-//         //     } else {
-//         //         result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments", details: nil))
-//         //     }
-//         case "runJavaScript":
-//             if let args = call.arguments as? [String: Any],
-//                  let script = args["script"] as? String {
-//                 runJavaScript(script)
-//                 // result(nil)
-//             } else {
-//                 result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments", details: nil))
-//             }
-//         default:
-//             result(FlutterMethodNotImplemented)
-//         }
+    public static func register(with registrar: FlutterPluginRegistrar) {
+        let channel = FlutterMethodChannel(name: "webview_mo_flutter", binaryMessenger: registrar.messenger())
+         let eventChannel = FlutterEventChannel(name: "webview_plugin_events", binaryMessenger: registrar.messenger())
+        let instance = WebViewMoFlutterPlugin()
+        registrar.addMethodCallDelegate(instance, channel: channel)
+        eventChannel.setStreamHandler(instance)
 
 
-//     }
-
-//     @available(iOS 13.0, *)
-//    public static func presentWebView(url: String) {
-//         guard let scene = SceneDelegate.currentScene() else { return }
-
-//         let webViewController = WebViewController()
-//         webViewController.url = url
-
-//         if let rootViewController = scene.windows.first?.rootViewController {
-//             rootViewController.present(webViewController, animated: true)
-//         }
-//     }
-
-
-//     private func loadUrl(_ url: String) {
-//         let config = WKWebViewConfiguration()
-//         // let script = "document.cookie = 'authToken=\(authToken)';"
-//         // let scriptInjection = WKUserScript(source: script, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-//         // config.userContentController.addUserScript(scriptInjection)
-        
-//         webView = WKWebView(frame: UIScreen.main.bounds)
-
-//         if let webView = webView, let url = URL(string: url) {
-//             let request = URLRequest(url: url)
-//             webView.load(request)
-            
-//             // Add the webView to your content view
-//             // For example, if you're using SwiftUI:
-//             // let contentView = WebViewContainer(webView: webView)
-//             // window.rootViewController = UIHostingController(rootView: contentView)
-            
-//             webView.navigationDelegate = self
-//         }
-//     }
-    
-//     private func runJavaScript(_ script: String) {
-//         webView?.evaluateJavaScript(script) { (result, error) in
-//             // Handle the result or error if needed
-//         }
-//     }
-// }
-
-// @available(iOS 13.0, *)
-// class WebViewController: UIViewController, WKNavigationDelegate {
-//     var webView: WKWebView!
-//     var url: String?
-
-//     override func viewDidLoad() {
-//         super.viewDidLoad()
-
-//         webView = WKWebView()
-//         webView.navigationDelegate = self
-//         view.addSubview(webView)
-//         webView.translatesAutoresizingMaskIntoConstraints = false
-//         NSLayoutConstraint.activate([
-//             webView.topAnchor.constraint(equalTo: view.topAnchor),
-//             webView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-//             webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-//             webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-//         ])
-
-//         if let urlString = url, let url = URL(string: urlString) {
-//             let request = URLRequest(url: url)
-//             webView.load(request)
-//         }
-//     }
-// }
-
-
-
-// extension WebViewMoFlutterPlugin: WKNavigationDelegate {
-//     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-//         print("WebView did finish navigation")
-        
-//         // authorizeCharts(authToken: )
-//         // loadCharts()
-//     }
-    
-//     private func authorizeCharts(String authToken: String) {
-        
-//         webView?.evaluateJavaScript("ChartApp.v1.authorize('\(authToken)')") { (result, error) in
-           
-//         }
-//         // Run authorization logic for charts
-//     }
-    
-//     private func loadCharts() {
-//         // Load charts
-//     }
-// }
-
-
-import Flutter
-import UIKit
-import WebKit
-
-public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin {
-  public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(name: "webview_mo_flutter", binaryMessenger: registrar.messenger())
-    let eventChannel = FlutterEventChannel(name: "webview_plugin_events", binaryMessenger: registrar.messenger())
-    let instance = WebViewMoFlutterPlugin()
-    eventChannel.setStreamHandler(instance)
-    registrar.addMethodCallDelegate(instance, channel: channel)
-  }
-    private var webViewController: WebViewController?
-  private var eventSink: FlutterEventSink?
-  public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    if call.method == "loadUrl" {
-      if let args = call.arguments as? [String: Any],
-         let urlString = args["initialUrl"] as? String,
-         let url = URL(string: urlString) {
-        webViewController = WebViewController()
-        webViewController?.url = url
-        webViewController?.delegate = self
-        UIApplication.shared.keyWindow?.rootViewController?.present(webViewController!, animated: true, completion: nil)
-        result(nil)
-      } else {
-        result(FlutterError(code: "INVALID_ARGUMENT", message: "URL is required", details: nil))
-      }
-    } else if call.method == "runJavaScript" {
-        if let script = (call.arguments as? [String: Any])?["script"] as? String {
-          webViewController?.webView.evaluateJavaScript(script) { (response, error) in
-            if let error = error {
-              result(FlutterError(code: "JAVASCRIPT_ERROR", message: error.localizedDescription, details: nil))
-            } else {
-              result(response)
-            }
-          }
-        } else {
-          result(FlutterError(code: "INVALID_ARGUMENT", message: "JavaScript code is required", details: nil))
-        }
-      }
-      
-      else {
-      result(FlutterMethodNotImplemented)
+        // Initialize the view factory
+        let factory = WebViewMoFlutterViewFactory(messenger: registrar.messenger(), delegate: instance)
+        registrar.register(factory, withId: "web_view_mo_flutter")
     }
-  }
+ private var eventSink: FlutterEventSink?
+    public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        switch call.method {
+       case "loadUrl":
+            if let args = call.arguments as? [String: Any],
+               let urlString = args["initialUrl"] as? String {
+                let javaScriptChannelName = args["javaScriptChannelName"] as? String
+                WebViewManager.shared.loadURL(urlString, withJavaScriptChannel: javaScriptChannelName, plugin: self)
+                result(nil)
+            } else {
+                result(FlutterError(code: "INVALID_ARGUMENT", message: "URL is required", details: nil))
+            }
+        case "runJavaScript":
+            if let script = (call.arguments as? [String: Any])?["script"] as? String {
+                WebViewManager.shared.evaluateJavaScript(script, completionHandler: { (response, error) in
+                    if let error = error {
+                        result(FlutterError(code: "JAVASCRIPT_ERROR", message: error.localizedDescription, details: nil))
+                    } else {
+                        result(response)
+                    }
+                })
+            } else {
+                result(FlutterError(code: "INVALID_ARGUMENT", message: "JavaScript code is required", details: nil))
+            }
+        case "reloadUrl":
+            WebViewManager.shared.webView?.reload()
+            result(nil)
+        case "resetCache":
+            WebViewManager.shared.resetWebViewCache()
+            result(nil)
+        case "addJavascriptChannel":
+            if let args = call.arguments as? [String: Any], let channelName = args["channelName"] as? String {
+                WebViewManager.shared.addJavascriptChannel(name: channelName)
+            }
+            result(nil)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+    
+    @objc public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+          print("Received message: \(message.name) with body: \(message.body)")
+        if let messageBody = message.body as? String {
+            print("Received message from JavaScript: \(messageBody)")
+            eventSink?(messageBody)
+        }
+    }
+    
+    func sendMessageBody(body : String){
+        eventSink?(body)
+    }
+    
+    func pageDidLoad() {
+        eventSink?("pageLoaded")
+    }
 }
 
 extension WebViewMoFlutterPlugin: FlutterStreamHandler {
-  public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-    eventSink = events
-    return nil
-  }
+    public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        WebViewManager.shared.delegate = self  // Assuming WebViewManager now includes a delegate
+        return nil
+    }
 
-  public func onCancel(withArguments arguments: Any?) -> FlutterError? {
-    eventSink = nil
-    return nil
-  }
+    public func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        self.eventSink = nil
+        WebViewManager.shared.delegate = nil
+        return nil
+    }
+
 }
 
-extension WebViewMoFlutterPlugin: WebViewControllerDelegate {
-  func pageDidLoad() {
-    eventSink?("pageLoaded")
-  }
-}
 
 protocol WebViewControllerDelegate: AnyObject {
-  func pageDidLoad()
+    func pageDidLoad()
+    
+    func sendMessageBody(body: String)
+    
 }
 
-class WebViewController: UIViewController, WKNavigationDelegate {
-  var webView: WKWebView!
-  var url: URL!
-  weak var delegate: WebViewControllerDelegate?
+class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+    static let shared = WebViewManager()
+    var webView: WKWebView!
+    weak var delegate: WebViewControllerDelegate?
+    private var configuredJavaScriptChannels: Set<String> = []
+    
 
-  override func viewDidLoad() {
-    super.viewDidLoad()
-    webView = WKWebView()
-    webView.navigationDelegate = self
-    view = webView
-    webView.load(URLRequest(url: url))
-  }
+    override init() {
+        super.init()
+        let configuration = WKWebViewConfiguration()
+        configuration.preferences.javaScriptEnabled = true
+        configuration.preferences.setValue(true, forKey: "developerExtrasEnabled")
+        webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.navigationDelegate = self
+    }
 
-  override func viewDidAppear(_ animated: Bool) {
-    super.viewDidAppear(animated)
-   let closeButton = UIBarButtonItem(barButtonSystemItem: .close, target: self, action: #selector(close))
-   navigationItem.rightBarButtonItem = closeButton
-  }
+     func loadURL(_ urlString: String, withJavaScriptChannel javaScriptChannelName: String?, plugin: WKScriptMessageHandler) {
+         if javaScriptChannelName != nil {
+             addJavascriptChannel(name: javaScriptChannelName ?? "ChartAppDelegate")
+        }
 
- @objc func close() {
-   dismiss(animated: true, completion: nil)
- }
+        guard let url = URL(string: urlString) else { return }
+        if webView.url != url {
+            print("Loading URL: \(urlString)")
+            webView.load(URLRequest(url: url))
+        } else {
+            print("Load URL skipped as it's the same as the current URL")
+        }
+    }
 
-  func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-    delegate?.pageDidLoad()
-  }
+     func getWebView(frame: CGRect) -> WKWebView {
+        webView?.frame = frame
+        return webView!
+    }
+
+    func evaluateJavaScript(_ script: String, completionHandler: @escaping (Any?, Error?) -> Void) {
+        webView.evaluateJavaScript(script, completionHandler: completionHandler)
+    }
+
+    func resetWebViewCache() {
+        let websiteDataTypes = WKWebsiteDataStore.allWebsiteDataTypes()
+        let date = Date(timeIntervalSince1970: 0)
+        WKWebsiteDataStore.default().removeData(ofTypes: websiteDataTypes, modifiedSince: date, completionHandler: {})
+    }
+
+    func addJavascriptChannel(name: String) -> Bool {
+            if configuredJavaScriptChannels.contains(name) {
+                return false
+            }
+            let wrapperSource = "window.\(name) = webkit.messageHandlers.\(name);"
+            let wrapperScript = WKUserScript(
+                source: wrapperSource,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false
+            )
+            webView.configuration.userContentController.addUserScript(wrapperScript)
+            webView.configuration.userContentController.add(self, name: name)
+        configuredJavaScriptChannels.insert(name)
+            return true
+        }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        delegate?.pageDidLoad()
+    }
+
+
+
+    // Implement WKScriptMessageHandler method
+    @objc public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+          print("Received message: \(message.name) with body: \(message.body)")
+        if let messageBody = message.body as? String {
+            print("Received message from JavaScript: \(messageBody)")
+            delegate?.sendMessageBody(body: messageBody)
+        }
+    }
 }
+
