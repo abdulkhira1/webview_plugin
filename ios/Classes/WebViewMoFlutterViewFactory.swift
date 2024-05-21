@@ -45,6 +45,7 @@ class WebViewMoFlutter: NSObject, FlutterPlatformView {
         // Check if Url is same as loaded in the webview
         // If it is same, then don't load the url again
         if let url = url, webView.url != url {
+            print("Loading URL: 2 \(url)")
             webView.load(URLRequest(url: url))
         } else {
             // Optionally, notify delegate or log that the URL load was skipped because it's the same as the current one

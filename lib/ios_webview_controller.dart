@@ -14,7 +14,27 @@ class WebViewMoFlutterController {
       await _methodChannel.invokeMethod('loadUrl', {'initialUrl': url});
     } on PlatformException catch (e) {
       print("Failed to load URL: ${e.message}");
-      throw e;
+      rethrow;
+    }
+  }
+
+  /// Reloads the current URL.
+  Future<void> reloadUrl() async {
+    try {
+      await _methodChannel.invokeMethod('reloadUrl');
+    } on PlatformException catch (e) {
+      print("Failed to reload URL: ${e.message}");
+      rethrow;
+    }
+  }
+
+  /// Resets the web view's cache.
+  Future<void> resetCache() async {
+    try {
+      await _methodChannel.invokeMethod('resetCache');
+    } on PlatformException catch (e) {
+      print("Failed to reset cache: ${e.message}");
+      rethrow;
     }
   }
 
@@ -25,16 +45,25 @@ class WebViewMoFlutterController {
       return result;
     } on PlatformException catch (e) {
       print("Failed to execute JavaScript: ${e.message}");
-      throw e;
+      rethrow;
     }
   }
 
-  /// Stream of page load events.
-  Stream<String> get onPageLoaded {
-    _onPageLoadedStream ??=
-        _eventChannel.receiveBroadcastStream().map<String>((event) => event as String);
-    return _onPageLoadedStream!;
+  /// Adds a JavaScript channel to the web view.
+  Future<void> addJavascriptChannel(String channelName) async {
+    try {
+      await _methodChannel.invokeMethod('addJavascriptChannel', {'channelName': channelName});
+      _onMessageReceivedStream ??=
+          _eventChannel.receiveBroadcastStream().map<String>((event) => event.toString());
+    } on PlatformException catch (e) {
+      print("Failed to add JavaScript channel: ${e.message}");
+      rethrow;
+    }
   }
+
+  Stream<String>? _onMessageReceivedStream;
+
+  Stream<String> get onMessageReceived => _onMessageReceivedStream!;
 
   /// Close the web view (if supported by the native code).
   Future<void> closeWebView() async {
@@ -42,7 +71,7 @@ class WebViewMoFlutterController {
       await _methodChannel.invokeMethod('close');
     } on PlatformException catch (e) {
       print("Failed to close web view: ${e.message}");
-      throw e;
+      rethrow;
     }
   }
 }
