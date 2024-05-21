@@ -38,8 +38,8 @@ class WebViewMoFlutter(
 
     init {
         if (args is Map<*, *>) {
-            val initialUrl = args["initialUrl"] as? String
-            initialUrl?.let { webViewManager.loadURL(it) }
+//            val initialUrl = args["initialUrl"] as? String
+//            initialUrl?.let { webViewManager.loadURL(it) }
         }
     }
 
@@ -82,6 +82,7 @@ class WebViewManager private constructor(private val context: Context) {
                     @JavascriptInterface
                     fun onMessageReceived(message: String) {
                         Log.d("onMessageReceived", "Message: $message")
+                        delegate?.onMessageReceived(message)
                     }
                 }, "ChartAppDelegate")
             }
@@ -118,4 +119,5 @@ class WebViewManager private constructor(private val context: Context) {
 
 interface WebViewControllerDelegate {
     fun pageDidLoad()
+    fun onMessageReceived(message:String)
 }

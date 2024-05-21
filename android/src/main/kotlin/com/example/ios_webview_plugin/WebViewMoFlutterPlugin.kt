@@ -76,4 +76,8 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
     override fun pageDidLoad() {
         eventSink?.success("pageLoaded")
     }
+
+    override fun onMessageReceived(message: String) {
+        eventSink?.success(message)
+    }
 }

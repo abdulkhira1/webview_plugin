@@ -39,7 +39,10 @@ flutter:
     # then add platforms following the instruction here:
     # https://flutter.dev/docs/development/packages-and-plugins/developing-packages#plugin-platforms
     # -------------------
-      ios: 
+      android:
+        package: com.example.ios_webview_plugin
+        pluginClass: WebViewMoFlutterPlugin
+      ios:
         pluginClass: WebViewMoFlutterPlugin
       
     # -------------------
