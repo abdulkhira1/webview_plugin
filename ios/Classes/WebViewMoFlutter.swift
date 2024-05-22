@@ -111,6 +111,7 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         configuration.preferences.setValue(true, forKey: "developerExtrasEnabled")
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
+        addJavascriptChannel(name: "ChartAppDelegate")
     }
 
      func loadURL(_ urlString: String, withJavaScriptChannel javaScriptChannelName: String?, plugin: WKScriptMessageHandler) {
@@ -159,7 +160,7 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        delegate?.pageDidLoad()
+//        delegate?.pageDidLoad()
     }
 
 

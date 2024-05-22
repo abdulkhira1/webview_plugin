@@ -64,7 +64,7 @@ class WebViewMoFlutter: NSObject, FlutterPlatformView,WKScriptMessageHandler {
 
 extension WebViewMoFlutter: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        delegate?.pageDidLoad()
+//        delegate?.pageDidLoad()
     }
     
     public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
