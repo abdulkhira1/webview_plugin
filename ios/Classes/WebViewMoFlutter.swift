@@ -1,26 +1,28 @@
 import Flutter
 import UIKit
 import WebKit
+
 public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHandler, WebViewControllerDelegate {
     private var webView: WKWebView?
     private var channel: FlutterMethodChannel?
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "webview_mo_flutter", binaryMessenger: registrar.messenger())
-         let eventChannel = FlutterEventChannel(name: "webview_plugin_events", binaryMessenger: registrar.messenger())
+        let eventChannel = FlutterEventChannel(name: "webview_plugin_events", binaryMessenger: registrar.messenger())
         let instance = WebViewMoFlutterPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
         eventChannel.setStreamHandler(instance)
-
 
         // Initialize the view factory
         let factory = WebViewMoFlutterViewFactory(messenger: registrar.messenger(), delegate: instance)
         registrar.register(factory, withId: "web_view_mo_flutter")
     }
- private var eventSink: FlutterEventSink?
+    
+    private var eventSink: FlutterEventSink?
+    
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
-       case "loadUrl":
+        case "loadUrl":
             if let args = call.arguments as? [String: Any],
                let urlString = args["initialUrl"] as? String {
                 let javaScriptChannelName = args["javaScriptChannelName"] as? String
@@ -50,8 +52,10 @@ public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHan
         case "addJavascriptChannel":
             if let args = call.arguments as? [String: Any], let channelName = args["channelName"] as? String {
                 WebViewManager.shared.addJavascriptChannel(name: channelName)
+                result(nil)
+            } else {
+                result(FlutterError(code: "INVALID_ARGUMENT", message: "Channel name is required", details: nil))
             }
-            result(nil)
         case "getCurrentUrl":
             result(WebViewManager.shared.webView?.url?.absoluteString)
         default:
@@ -60,14 +64,14 @@ public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHan
     }
     
     @objc public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-          print("Received message: \(message.name) with body: \(message.body)")
+        print("Received message: \(message.name) with body: \(message.body)")
         if let messageBody = message.body as? String {
             print("Received message from JavaScript: \(messageBody)")
             eventSink?(messageBody)
         }
     }
     
-    func sendMessageBody(body : String){
+    func sendMessageBody(body: String) {
         eventSink?(body)
     }
     
@@ -79,7 +83,7 @@ public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHan
 extension WebViewMoFlutterPlugin: FlutterStreamHandler {
     public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
         self.eventSink = events
-        WebViewManager.shared.delegate = self  // Assuming WebViewManager now includes a delegate
+        WebViewManager.shared.delegate = self
         return nil
     }
 
@@ -88,15 +92,11 @@ extension WebViewMoFlutterPlugin: FlutterStreamHandler {
         WebViewManager.shared.delegate = nil
         return nil
     }
-
 }
-
 
 protocol WebViewControllerDelegate: AnyObject {
     func pageDidLoad()
-    
     func sendMessageBody(body: String)
-    
 }
 
 class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
@@ -116,12 +116,17 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         addJavascriptChannel(name: "ChartAppDelegate")
     }
 
-     func loadURL(_ urlString: String, withJavaScriptChannel javaScriptChannelName: String?, plugin: WKScriptMessageHandler) {
-         if javaScriptChannelName != nil {
-             addJavascriptChannel(name: javaScriptChannelName ?? "ChartAppDelegate")
+    func loadURL(_ urlString: String, withJavaScriptChannel javaScriptChannelName: String?, plugin: WKScriptMessageHandler) {
+        guard let url = URL(string: urlString), isValidURL(url) else {
+            print("Invalid URL provided, loading default URL.")
+            loadDefaultURL()
+            return
         }
 
-        guard let url = URL(string: urlString) else { return }
+        if javaScriptChannelName != nil {
+            addJavascriptChannel(name: javaScriptChannelName ?? "ChartAppDelegate")
+        }
+
         if webView.url != url {
             print("Loading URL: \(urlString)")
             webView.load(URLRequest(url: url))
@@ -130,7 +135,7 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         }
     }
 
-     func getWebView(frame: CGRect) -> WKWebView {
+    func getWebView(frame: CGRect) -> WKWebView {
         webView?.frame = frame
         return webView!
     }
@@ -146,21 +151,20 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     }
 
     func addJavascriptChannel(name: String) -> Bool {
-            if configuredJavaScriptChannels.contains(name) {
-                return false
-            }
-            let wrapperSource = "window.\(name) = webkit.messageHandlers.\(name);"
-            let wrapperScript = WKUserScript(
-                source: wrapperSource,
-                injectionTime: .atDocumentStart,
-                forMainFrameOnly: false
-            )
-            webView.configuration.userContentController.addUserScript(wrapperScript)
-            webView.configuration.userContentController.add(self, name: name)
-        configuredJavaScriptChannels.insert(name)
-            return true
+        if configuredJavaScriptChannels.contains(name) {
+            return false
         }
-
+        let wrapperSource = "window.\(name) = webkit.messageHandlers.\(name);"
+        let wrapperScript = WKUserScript(
+            source: wrapperSource,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: false
+        )
+        webView.configuration.userContentController.addUserScript(wrapperScript)
+        webView.configuration.userContentController.add(self, name: name)
+        configuredJavaScriptChannels.insert(name)
+        return true
+    }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         handleLoadingError()
@@ -172,24 +176,28 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
 
     private func handleLoadingError() {
         print("Failed to load URL, navigating to default URL.")
+        loadDefaultURL()
+    }
+
+    private func loadDefaultURL() {
         if let defaultURL = URL(string: defaultURLString) {
             webView.load(URLRequest(url: defaultURL))
         }
     }
 
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-//        delegate?.pageDidLoad()
+    private func isValidURL(_ url: URL) -> Bool {
+        return UIApplication.shared.canOpenURL(url)
     }
 
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        delegate?.pageDidLoad()
+    }
 
-
-    // Implement WKScriptMessageHandler method
     @objc public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-          print("Received message: \(message.name) with body: \(message.body)")
+        print("Received message: \(message.name) with body: \(message.body)")
         if let messageBody = message.body as? String {
             print("Received message from JavaScript: \(messageBody)")
             delegate?.sendMessageBody(body: messageBody)
         }
     }
 }
-
