@@ -37,10 +37,10 @@ class WebViewMoFlutter(
     private val webView: WebView = webViewManager.getOrCreateWebView()
 
     init {
-        if (args is Map<*, *>) {
+//        if (args is Map<*, *>) {
 //            val initialUrl = args["initialUrl"] as? String
-//            initialUrl?.let { webViewManager.loadURL(it) }
-        }
+//            initialUrl?.let { webViewManager.loadURL(it, null, null) }
+//        }
     }
 
     override fun getView(): WebView = webView
@@ -53,18 +53,21 @@ class WebViewMoFlutter(
 class WebViewManager private constructor(private val context: Context) {
 
     var delegate: WebViewControllerDelegate? = null
-    private var webView: WebView? = null
+    var webView: WebView? = null
+        private set
+    private val configuredJavaScriptChannels: MutableSet<String> = mutableSetOf()
+    private val defaultURLString = "https://tradingview.com/"
 
     fun getOrCreateWebView(): WebView {
         if (webView == null) {
-            Log.d("getOrCreateWebView", "  = = = = = = = = ")
+            configuredJavaScriptChannels.clear()
             webView = WebView(context).apply {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.javaScriptCanOpenWindowsAutomatically = true
                 webChromeClient = object : WebChromeClient() {
                     override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
-                        Log.d("WebViewConsole", "${consoleMessage.message()} at ${consoleMessage.sourceId()}:${consoleMessage.lineNumber()}")
+                        Log.d("WebViewMoFlutterPlugin", "WebViewConsole: ${consoleMessage.message()} at ${consoleMessage.sourceId()}:${consoleMessage.lineNumber()}")
                         return true
                     }
                 }
@@ -78,27 +81,49 @@ class WebViewManager private constructor(private val context: Context) {
                         return false
                     }
                 }
-                addJavascriptInterface(object : Any() {
-                    @JavascriptInterface
-                    fun onMessageReceived(message: String) {
-                        Log.d("onMessageReceived", "Message: $message")
-                        delegate?.onMessageReceived(message)
-                    }
-                }, "ChartAppDelegate")
+
             }
         }
         return webView!!
     }
 
-    fun loadURL(urlString: String) {
-        Log.d("loadURL", "  = = = = = = = = $urlString")
-        webView?.loadUrl(urlString)
+    fun loadURL(urlString: String, javaScriptChannelName: String?, plugin: WebViewMoFlutterPlugin?) {
+        if (urlString.isNotEmpty()) {
+            if (javaScriptChannelName != null) {
+                addJavascriptChannel(javaScriptChannelName)
+            }
+            webView?.loadUrl(urlString)
+        } else {
+            loadDefaultURL()
+        }
     }
 
     fun evaluateJavaScript(script: String, completionHandler: (Any?, Throwable?) -> Unit) {
         webView?.evaluateJavascript(script) { result ->
             completionHandler(result, null)
         }
+    }
+
+    fun resetWebViewCache() {
+        webView?.clearCache(true)
+    }
+
+    fun addJavascriptChannel(name: String): Boolean {
+        if (configuredJavaScriptChannels.contains(name)) return false
+        webView?.addJavascriptInterface(object : Any() {
+            @JavascriptInterface
+            fun postMessage(message: String) {
+                delegate?.onMessageReceived(message)
+            }
+        }, "ChartAppDelegate")
+        configuredJavaScriptChannels.add(name)
+        return true
+    }
+
+
+
+    private fun loadDefaultURL() {
+        webView?.loadUrl(defaultURLString)
     }
 
     fun destroyWebView() {
@@ -119,5 +144,5 @@ class WebViewManager private constructor(private val context: Context) {
 
 interface WebViewControllerDelegate {
     fun pageDidLoad()
-    fun onMessageReceived(message:String)
+    fun onMessageReceived(message: String)
 }

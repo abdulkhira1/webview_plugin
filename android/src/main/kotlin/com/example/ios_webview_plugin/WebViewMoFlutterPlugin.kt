@@ -1,12 +1,13 @@
 package com.example.ios_webview_plugin
 
 import android.content.Context
-import android.util.Log
-import android.webkit.WebView
+import android.os.Handler
+import android.os.Looper
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.EventChannel
+
 
 class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel.StreamHandler, WebViewControllerDelegate {
 
@@ -15,6 +16,7 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
     private var eventSink: EventChannel.EventSink? = null
     private lateinit var context: Context
     private lateinit var webViewManager: WebViewManager
+    private val uiThreadHandler: Handler = Handler(Looper.getMainLooper())
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         context = flutterPluginBinding.applicationContext
@@ -38,8 +40,9 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
         when (call.method) {
             "loadUrl" -> {
                 val urlString = call.argument<String>("initialUrl")
+                val javaScriptChannelName = call.argument<String>("javaScriptChannelName")
                 if (urlString != null) {
-                    webViewManager.loadURL(urlString)
+                    webViewManager.loadURL(urlString, javaScriptChannelName, this)
                     result.success(null)
                 } else {
                     result.error("INVALID_ARGUMENT", "URL is required", null)
@@ -59,11 +62,31 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
                     result.error("INVALID_ARGUMENT", "JavaScript code is required", null)
                 }
             }
+            "reloadUrl" -> {
+                webViewManager.webView?.reload()
+                result.success(null)
+            }
+            "resetCache" -> {
+                webViewManager.resetWebViewCache()
+                result.success(null)
+            }
+            "addJavascriptChannel" -> {
+                val channelName = call.argument<String>("channelName")
+                if (channelName != null) {
+                    webViewManager.addJavascriptChannel(channelName)
+                    result.success(null)
+                } else {
+                    result.error("INVALID_ARGUMENT", "Channel name is required", null)
+                }
+            }
+            "getCurrentUrl" -> {
+                result.success(webViewManager.webView?.url)
+            }
             else -> result.notImplemented()
         }
     }
 
-    override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
+    override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         eventSink = events
         webViewManager.delegate = this
     }
@@ -78,6 +101,8 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
     }
 
     override fun onMessageReceived(message: String) {
-        eventSink?.success(message)
+        uiThreadHandler.post {
+            eventSink?.success(message)
+        }
     }
 }
