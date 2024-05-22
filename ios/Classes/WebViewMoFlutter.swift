@@ -52,6 +52,8 @@ public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHan
                 WebViewManager.shared.addJavascriptChannel(name: channelName)
             }
             result(nil)
+        case "getCurrentUrl":
+            result(WebViewManager.shared.webView?.url?.absoluteString)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -102,7 +104,7 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     var webView: WKWebView!
     weak var delegate: WebViewControllerDelegate?
     private var configuredJavaScriptChannels: Set<String> = []
-    
+    private let defaultURLString = "https://tradingview.com/"
 
     override init() {
         super.init()
@@ -158,6 +160,22 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         configuredJavaScriptChannels.insert(name)
             return true
         }
+
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        handleLoadingError()
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        handleLoadingError()
+    }
+
+    private func handleLoadingError() {
+        print("Failed to load URL, navigating to default URL.")
+        if let defaultURL = URL(string: defaultURLString) {
+            webView.load(URLRequest(url: defaultURL))
+        }
+    }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
 //        delegate?.pageDidLoad()
