@@ -3,6 +3,7 @@ package com.example.ios_webview_plugin
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
@@ -31,6 +32,7 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        Log.d("WebViewMoFlutterPlugin", "onDetachedFromEngine")
         methodChannel.setMethodCallHandler(null)
         eventChannel.setStreamHandler(null)
         webViewManager.destroyWebView()
@@ -92,6 +94,8 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
     }
 
     override fun onCancel(arguments: Any?) {
+        Log.d("WebViewMoFlutterPlugin", "onCancel")
+
         eventSink = null
         webViewManager.delegate = null
     }

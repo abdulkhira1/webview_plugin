@@ -6,7 +6,9 @@ import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import io.flutter.plugin.common.BinaryMessenger
@@ -46,6 +48,7 @@ class WebViewMoFlutter(
     override fun getView(): WebView = webView
 
     override fun dispose() {
+        Log.d("WebViewMoFlutterPlugin", "dispose")
         webViewManager.destroyWebView()
     }
 }
@@ -57,6 +60,7 @@ class WebViewManager private constructor(private val context: Context) {
         private set
     private val configuredJavaScriptChannels: MutableSet<String> = mutableSetOf()
     private val defaultURLString = "https://tradingview.com/"
+    private var isWebViewPaused: Boolean = false
 
     fun getOrCreateWebView(): WebView {
         if (webView == null) {
@@ -64,6 +68,7 @@ class WebViewManager private constructor(private val context: Context) {
             webView = WebView(context).apply {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
+                settings.cacheMode = WebSettings.LOAD_DEFAULT
                 settings.javaScriptCanOpenWindowsAutomatically = true
                 webChromeClient = object : WebChromeClient() {
                     override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
@@ -80,6 +85,16 @@ class WebViewManager private constructor(private val context: Context) {
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                         return false
                     }
+
+                    override fun onReceivedError(
+                        view: WebView?,
+                        request: WebResourceRequest?,
+                        error: WebResourceError?
+                    ) {
+                        super.onReceivedError(view, request, error)
+                        delegate?.onMessageReceived("error")
+                        loadDefaultURL()
+                    }
                 }
 
             }
@@ -88,6 +103,7 @@ class WebViewManager private constructor(private val context: Context) {
     }
 
     fun loadURL(urlString: String, javaScriptChannelName: String?, plugin: WebViewMoFlutterPlugin?) {
+        if (isWebViewPaused) resumeWebView()
         if (urlString.isNotEmpty()) {
             if (javaScriptChannelName != null) {
                 addJavascriptChannel(javaScriptChannelName)
@@ -99,6 +115,7 @@ class WebViewManager private constructor(private val context: Context) {
     }
 
     fun evaluateJavaScript(script: String, completionHandler: (Any?, Throwable?) -> Unit) {
+        if (isWebViewPaused) resumeWebView()
         webView?.evaluateJavascript(script) { result ->
             completionHandler(result, null)
         }
@@ -127,8 +144,18 @@ class WebViewManager private constructor(private val context: Context) {
     }
 
     fun destroyWebView() {
-        webView?.destroy()
-        webView = null
+        isWebViewPaused = true
+        Log.d("WebViewMoFlutterPlugin", "destroyWebView")
+        webView?.onPause()
+        webView?.pauseTimers()
+//        webView?.destroy()
+//        webView = null
+    }
+
+    fun resumeWebView() {
+        isWebViewPaused = false
+        webView?.onResume()
+        webView?.resumeTimers()
     }
 
     companion object {
