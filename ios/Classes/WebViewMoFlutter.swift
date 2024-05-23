@@ -124,6 +124,7 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
 
     func loadURL(_ urlString: String, withJavaScriptChannel javaScriptChannelName: String?, plugin: WKScriptMessageHandler) {
         guard let url = URL(string: urlString), isValidURL(url) else {
+            delegate?.onPageLoadError()
             print("Invalid URL provided, loading default URL.")
             loadDefaultURL()
             return

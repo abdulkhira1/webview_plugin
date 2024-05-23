@@ -23,7 +23,7 @@ class WebViewMoFlutterViewFactory: NSObject, FlutterPlatformViewFactory {
     }
 }
 
-class WebViewMoFlutter: NSObject, FlutterPlatformView,WKScriptMessageHandler {
+class WebViewMoFlutter: NSObject, FlutterPlatformView {
     private var webView: WKWebView
     private var url: URL?
     private var delegate: WebViewControllerDelegate?
@@ -66,12 +66,15 @@ extension WebViewMoFlutter: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         delegate?.pageDidLoad()
     }
-    
-    public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        print("Received message: \(message.name) with body: \(message.body)")
-        if let messageBody = message.body as? String {
-//            eventSink?(messageBody)
-            print("Received message from JavaScript: \(messageBody)")
-        }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        // handleLoadingError()
+        delegate?.onPageLoadError()
     }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        // handleLoadingError()
+        delegate?.onPageLoadError()
+    }
+    
 }
