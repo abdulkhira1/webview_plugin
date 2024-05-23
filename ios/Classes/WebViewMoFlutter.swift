@@ -78,6 +78,10 @@ public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHan
     func pageDidLoad() {
         eventSink?("pageLoaded")
     }
+
+    func onPageLoadError() {
+        eventSink?("error")
+    }
 }
 
 extension WebViewMoFlutterPlugin: FlutterStreamHandler {
@@ -92,11 +96,13 @@ extension WebViewMoFlutterPlugin: FlutterStreamHandler {
         WebViewManager.shared.delegate = nil
         return nil
     }
+
 }
 
 protocol WebViewControllerDelegate: AnyObject {
     func pageDidLoad()
     func sendMessageBody(body: String)
+    func onPageLoadError()
 }
 
 class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
@@ -175,6 +181,7 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     }
 
     private func handleLoadingError() {
+        delegate?.onPageLoadError()
         print("Failed to load URL, navigating to default URL.")
         loadDefaultURL()
     }
