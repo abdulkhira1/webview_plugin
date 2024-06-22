@@ -61,13 +61,13 @@ class WebViewManager private constructor(private val context: Context) {
     private val configuredJavaScriptChannels: MutableSet<String> = mutableSetOf()
     private val defaultURLString = "https://tradingview.com/"
     private var isWebViewPaused: Boolean = false
+    private var isFromChart: Boolean = true
 
     fun getOrCreateWebView(): WebView {
         if (webView == null) {
             configuredJavaScriptChannels.clear()
             webView = WebView(context).apply {
                 settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
                 settings.cacheMode = WebSettings.LOAD_DEFAULT
                 settings.javaScriptCanOpenWindowsAutomatically = true
                 webChromeClient = object : WebChromeClient() {
@@ -79,10 +79,14 @@ class WebViewManager private constructor(private val context: Context) {
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        delegate?.pageDidLoad()
+                        url?.let { delegate?.onPageFinished(it) }
                     }
 
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                        if (request?.url.toString().contains("mailto:") || request?.url.toString().contains("tel:")) {
+                            delegate?.onNavigationRequest(request?.url.toString())
+                            return true
+                        }
                         return false
                     }
 
@@ -92,9 +96,13 @@ class WebViewManager private constructor(private val context: Context) {
                         error: WebResourceError?
                     ) {
                         super.onReceivedError(view, request, error)
-                        delegate?.onMessageReceived("error")
-                        loadDefaultURL()
+                        delegate?.onReceivedError("error")
+                        if(isFromChart) {
+                            loadDefaultURL()
+                        }
                     }
+
+
                 }
 
             }
@@ -105,8 +113,10 @@ class WebViewManager private constructor(private val context: Context) {
     fun loadURL(urlString: String, javaScriptChannelName: String?, plugin: WebViewMoFlutterPlugin?) {
         if (isWebViewPaused) resumeWebView()
         if (urlString.isNotEmpty()) {
-            if (javaScriptChannelName != null) {
+            if (javaScriptChannelName != null && javaScriptChannelName.isNotEmpty()) {
                 addJavascriptChannel(javaScriptChannelName)
+            } else {
+                isFromChart = false
             }
             webView?.loadUrl(urlString)
         } else {
@@ -130,9 +140,9 @@ class WebViewManager private constructor(private val context: Context) {
         webView?.addJavascriptInterface(object : Any() {
             @JavascriptInterface
             fun postMessage(message: String) {
-                delegate?.onMessageReceived(message)
+                delegate?.onJavascriptChannelMessageReceived(name, message)
             }
-        }, "ChartAppDelegate")
+        }, name)
         configuredJavaScriptChannels.add(name)
         return true
     }
@@ -172,4 +182,8 @@ class WebViewManager private constructor(private val context: Context) {
 interface WebViewControllerDelegate {
     fun pageDidLoad()
     fun onMessageReceived(message: String)
+    fun onJavascriptChannelMessageReceived(channelName: String, message: String)
+    fun onNavigationRequest(url: String)
+    fun onPageFinished(url: String)
+    fun onReceivedError(message: String)
 }

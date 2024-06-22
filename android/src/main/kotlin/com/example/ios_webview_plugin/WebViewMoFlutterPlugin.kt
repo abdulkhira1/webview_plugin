@@ -47,7 +47,7 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
                     webViewManager.loadURL(urlString, javaScriptChannelName, this)
                     result.success(null)
                 } else {
-                    result.error("INVALID_ARGUMENT", "URL is required", null)
+                    result.error( "INVALID_ARGUMENT", "URL is required", null)
                 }
             }
             "runJavaScript" -> {
@@ -65,10 +65,13 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
                 }
             }
             "reloadUrl" -> {
+                Log.d("WebViewMoFlutterPlugin", "reloadUrl")
+
                 webViewManager.webView?.reload()
                 result.success(null)
             }
             "resetCache" -> {
+                Log.d("WebViewMoFlutterPlugin", "resetCache")
                 webViewManager.resetWebViewCache()
                 result.success(null)
             }
@@ -102,6 +105,29 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
 
     override fun pageDidLoad() {
         eventSink?.success("pageLoaded")
+    }
+
+    override fun onJavascriptChannelMessageReceived(channelName: String, message: String) {
+        uiThreadHandler.post {
+            eventSink?.success(mapOf("event" to "javascriptChannelMessageReceived", "channelName" to channelName, "message" to message))
+        }
+    }
+
+    override fun onNavigationRequest(url: String) {
+        uiThreadHandler.post {
+            eventSink?.success(mapOf("event" to "navigationRequest", "url" to url))
+        }
+    }
+
+    override fun onPageFinished(url: String) {
+        uiThreadHandler.post {
+            eventSink?.success(mapOf("event" to "pageFinished", "url" to url))
+        }
+    }
+    override fun onReceivedError(message: String) {
+        uiThreadHandler.post {
+            eventSink?.success(mapOf("event" to "error", "url" to message))
+        }
     }
 
     override fun onMessageReceived(message: String) {

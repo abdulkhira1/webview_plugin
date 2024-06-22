@@ -75,19 +75,19 @@ class IosWebViewPlugin {
     }
   }
 
-  static void getJavaScriptChannelStream(Function(String) callback) {
+  static void getJavaScriptChannelStream(Function(String, dynamic) callback) {
     _eventChannel.receiveBroadcastStream().listen((event) {
       if (event != 'pageLoaded') {
-        callback(event);
+        print(event);
+        callback(event['event'], event['url'] == null ? event['message'] : event['url']);
       }
     });
   }
 
-  static void setWebViewLoadedCallback(Function callback) {
+  static void setWebViewLoadedCallback(Function(String, String) callback) {
     _eventChannel.receiveBroadcastStream().listen((event) {
-      if (event == 'pageLoaded') {
-        callback();
-      }
+      print(event);
+      callback(event['event'], event['url']);
     });
   }
 }
