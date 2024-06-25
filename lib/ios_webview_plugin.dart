@@ -12,10 +12,11 @@ class IosWebViewPlugin {
 
   Stream<String> get onMessageReceived => _onMessageReceivedStream!;
 
-  static Future<void> openWebView(String url, {String? javascriptChannelName}) async {
+  static Future<void> openWebView(String url,
+      {String? javascriptChannelName, bool? isChart}) async {
     try {
-      await _channel.invokeMethod(
-          'loadUrl', {'initialUrl': url, 'javaScriptChannelName': javascriptChannelName});
+      await _channel.invokeMethod('loadUrl',
+          {'initialUrl': url, 'javaScriptChannelName': javascriptChannelName, 'isChart': isChart});
     } on PlatformException catch (e) {
       print("Failed to open WebView: '${e.message}'.");
     }
@@ -23,7 +24,8 @@ class IosWebViewPlugin {
 
   static Future<void> addJavascriptChannel(String channelName) async {
     try {
-      await _channel.invokeMethod('addJavascriptChannel', {'javaScriptChannelName': channelName});
+      print("addJavascriptChannel  $channelName");
+      await _channel.invokeMethod('addJavascriptChannel', {'channelName': channelName});
     } on PlatformException catch (e) {
       print("Failed to add JavaScript channel: ${e.message}");
       rethrow;
@@ -83,11 +85,10 @@ class IosWebViewPlugin {
     });
   }
 
-  static void setWebViewLoadedCallback(Function callback) {
+  static void setWebViewLoadedCallback(Function(dynamic) callback) {
     _eventChannel.receiveBroadcastStream().listen((event) {
-      if (event == 'pageLoaded') {
-        callback();
-      }
+      print(event);
+      callback(event);
     });
   }
 }

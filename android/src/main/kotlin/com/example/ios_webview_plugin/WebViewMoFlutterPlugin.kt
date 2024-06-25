@@ -43,8 +43,9 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
             "loadUrl" -> {
                 val urlString = call.argument<String>("initialUrl")
                 val javaScriptChannelName = call.argument<String>("javaScriptChannelName")
+                val isChart = call.argument<Boolean>("isChart") ?: true
                 if (urlString != null) {
-                    webViewManager.loadURL(urlString, javaScriptChannelName, this)
+                    webViewManager.loadURL(urlString, javaScriptChannelName, isChart)
                     result.success(null)
                 } else {
                     result.error("INVALID_ARGUMENT", "URL is required", null)
@@ -109,4 +110,35 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
             eventSink?.success(message)
         }
     }
+
+    override fun onJavascriptChannelMessageReceived(channelName: String, message: String) {
+        uiThreadHandler.post {
+            eventSink?.success(mapOf("event" to "javascriptChannelMessageReceived", "channelName" to channelName, "message" to message))
+        }
+    }
+
+    override fun onNavigationRequest(url: String) {
+        uiThreadHandler.post {
+            eventSink?.success(mapOf("event" to "navigationRequest", "url" to url))
+        }
+    }
+
+    override fun onPageFinished(url: String) {
+        uiThreadHandler.post {
+            eventSink?.success(mapOf("event" to "pageFinished", "url" to url))
+        }
+    }
+    override fun onReceivedError(message: String) {
+        uiThreadHandler.post {
+            eventSink?.success(mapOf("event" to "error", "url" to message))
+        }
+    }
+
+    override fun onJsAlert(url: String?, message: String?) {
+        uiThreadHandler.post {
+            eventSink?.success(mapOf("event" to "onJsAlert", "url" to url, "message" to message))
+        }
+    }
+
+
 }

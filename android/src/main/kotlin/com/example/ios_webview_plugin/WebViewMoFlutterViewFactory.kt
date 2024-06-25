@@ -1,10 +1,14 @@
-
 package com.example.ios_webview_plugin
 
+import android.app.AlertDialog
 import android.content.Context
+import android.os.Message
 import android.util.Log
+import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
+import android.webkit.JsResult
+import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -16,10 +20,11 @@ import io.flutter.plugin.common.StandardMessageCodec
 import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
 
+
 class WebViewMoFlutterViewFactory(
-    private val messenger: BinaryMessenger,
-    private val delegate: WebViewControllerDelegate?,
-    private val webViewManager: WebViewManager
+        private val messenger: BinaryMessenger,
+        private val delegate: WebViewControllerDelegate?,
+        private val webViewManager: WebViewManager
 ) : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
 
     override fun create(context: Context, viewId: Int, args: Any?): PlatformView {
@@ -28,12 +33,12 @@ class WebViewMoFlutterViewFactory(
 }
 
 class WebViewMoFlutter(
-    context: Context,
-    viewId: Int,
-    args: Any?,
-    messenger: BinaryMessenger,
-    private val delegate: WebViewControllerDelegate?,
-    private val webViewManager: WebViewManager
+        context: Context,
+        viewId: Int,
+        args: Any?,
+        messenger: BinaryMessenger,
+        private val delegate: WebViewControllerDelegate?,
+        private val webViewManager: WebViewManager
 ) : PlatformView {
 
     private val webView: WebView = webViewManager.getOrCreateWebView()
@@ -61,6 +66,7 @@ class WebViewManager private constructor(private val context: Context) {
     private val configuredJavaScriptChannels: MutableSet<String> = mutableSetOf()
     private val defaultURLString = "https://tradingview.com/"
     private var isWebViewPaused: Boolean = false
+    private var isFromChart: Boolean = true
 
     fun getOrCreateWebView(): WebView {
         if (webView == null) {
@@ -75,26 +81,68 @@ class WebViewManager private constructor(private val context: Context) {
                         Log.d("WebViewMoFlutterPlugin", "WebViewConsole: ${consoleMessage.message()} at ${consoleMessage.sourceId()}:${consoleMessage.lineNumber()}")
                         return true
                     }
+
+                    override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                        delegate?.onJsAlert(url, message)
+                        return true
+                    }
+
+                    override fun onPermissionRequest(request: PermissionRequest?) {
+                        super.onPermissionRequest(request)
+                        request?.grant(request.resources)
+                    }
+
+                    override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message?): Boolean {
+                        val newWebView = WebView(context)
+                        val webSettings = newWebView.settings
+                        webSettings.javaScriptEnabled = true
+                        webSettings.javaScriptCanOpenWindowsAutomatically = true
+
+                        val dialog = AlertDialog.Builder(context)
+                        dialog.setView(newWebView)
+                                .setPositiveButton("Close") { dialogInterface, i ->
+                                    (newWebView.parent as ViewGroup).removeView(newWebView)
+                                    dialogInterface.dismiss()
+                                }
+                                .show()
+
+                        val transport = resultMsg!!.obj as WebView.WebViewTransport
+                        transport.webView = newWebView
+                        resultMsg.sendToTarget()
+                        return true
+                    }
                 }
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        delegate?.pageDidLoad()
+                        if (isFromChart) {
+                            delegate?.pageDidLoad()
+                        } else {
+                            delegate?.onPageFinished(url ?: "")
+                        }
                     }
 
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                        if (!isFromChart) {
+                            delegate?.onNavigationRequest(request?.url.toString())
+                            return true
+                        }
                         return false
                     }
 
                     override fun onReceivedError(
-                        view: WebView?,
-                        request: WebResourceRequest?,
-                        error: WebResourceError?
+                            view: WebView?,
+                            request: WebResourceRequest?,
+                            error: WebResourceError?
                     ) {
                         super.onReceivedError(view, request, error)
                         delegate?.onMessageReceived("error")
-                        loadDefaultURL()
+                        if (isFromChart) {
+                            loadDefaultURL()
+                        }
                     }
+
+
                 }
 
             }
@@ -102,8 +150,8 @@ class WebViewManager private constructor(private val context: Context) {
         return webView!!
     }
 
-    fun loadURL(urlString: String, javaScriptChannelName: String?, plugin: WebViewMoFlutterPlugin?) {
-        if (isWebViewPaused) resumeWebView()
+    fun loadURL(urlString: String, javaScriptChannelName: String?, isChart: Boolean) {
+        isFromChart = isChart
         if (urlString.isNotEmpty()) {
             if (javaScriptChannelName != null) {
                 addJavascriptChannel(javaScriptChannelName)
@@ -112,6 +160,7 @@ class WebViewManager private constructor(private val context: Context) {
         } else {
             loadDefaultURL()
         }
+        if (isWebViewPaused) resumeWebView()
     }
 
     fun evaluateJavaScript(script: String, completionHandler: (Any?, Throwable?) -> Unit) {
@@ -127,16 +176,20 @@ class WebViewManager private constructor(private val context: Context) {
 
     fun addJavascriptChannel(name: String): Boolean {
         if (configuredJavaScriptChannels.contains(name)) return false
+        Log.d("WebViewMoFlutterPlugin", "addJavascriptChannel === $name")
         webView?.addJavascriptInterface(object : Any() {
             @JavascriptInterface
             fun postMessage(message: String) {
-                delegate?.onMessageReceived(message)
+                if (isFromChart) {
+                    delegate?.onMessageReceived(message)
+                } else {
+                    delegate?.onJavascriptChannelMessageReceived(name, message)
+                }
             }
-        }, "ChartAppDelegate")
+        }, name)
         configuredJavaScriptChannels.add(name)
         return true
     }
-
 
 
     private fun loadDefaultURL() {
@@ -144,12 +197,13 @@ class WebViewManager private constructor(private val context: Context) {
     }
 
     fun destroyWebView() {
-//        isWebViewPaused = true
+        isWebViewPaused = true
         Log.d("WebViewMoFlutterPlugin", "destroyWebView")
-//        webView?.onPause()
-//        webView?.pauseTimers()
-        webView?.destroy()
-        webView = null
+        webView?.loadUrl("about:blank")
+        webView?.onPause()
+        webView?.pauseTimers()
+//        webView?.destroy()
+//        webView = null
     }
 
     fun resumeWebView() {
@@ -172,4 +226,9 @@ class WebViewManager private constructor(private val context: Context) {
 interface WebViewControllerDelegate {
     fun pageDidLoad()
     fun onMessageReceived(message: String)
+    fun onJavascriptChannelMessageReceived(channelName: String, message: String)
+    fun onNavigationRequest(url: String)
+    fun onPageFinished(url: String)
+    fun onReceivedError(message: String)
+    fun onJsAlert(url: String?, message: String?)
 }
