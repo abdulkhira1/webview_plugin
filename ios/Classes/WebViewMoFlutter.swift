@@ -26,7 +26,9 @@ public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHan
             if let args = call.arguments as? [String: Any],
                let urlString = args["initialUrl"] as? String {
                 let javaScriptChannelName = args["javaScriptChannelName"] as? String
-                WebViewManager.shared.loadURL(urlString, withJavaScriptChannel: javaScriptChannelName, plugin: self)
+                let isChart = args["isChart"] as? Bool ?? true
+                print("Received isChart: \(isChart)")
+                WebViewManager.shared.loadURL(urlString, isChart, withJavaScriptChannel: javaScriptChannelName, plugin: self)
                 result(nil)
             } else {
                 result(FlutterError(code: "INVALID_ARGUMENT", message: "URL is required", details: nil))
@@ -75,13 +77,34 @@ public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHan
         eventSink?(body)
     }
     
-    func pageDidLoad() {
-        eventSink?("pageLoaded")
+    func pageDidLoad(url: String) {
+        eventSink?(["event": "pageFinished", "url": url])
     }
 
     func onPageLoadError() {
-        eventSink?("error")
+        eventSink?(["event": "error", "message": "error"])
     }
+
+    func onJavascriptChannelMessageReceived(channelName: String, message: String) {
+        eventSink?(["event": "javascriptChannelMessageReceived",  "channelName" : channelName, "message": message])
+    }
+
+    func onNavigationRequest(url: String) {
+
+    }
+
+    func onPageFinished(url: String) {
+        eventSink?(["event": "pageFinished", "url": url])
+    }
+
+    func onReceivedError(message: String) {
+
+    }
+
+    func onJsAlert(url: String, message: String) {
+
+    }
+
 }
 
 extension WebViewMoFlutterPlugin: FlutterStreamHandler {
@@ -100,9 +123,14 @@ extension WebViewMoFlutterPlugin: FlutterStreamHandler {
 }
 
 protocol WebViewControllerDelegate: AnyObject {
-    func pageDidLoad()
+    func pageDidLoad(url: String)
     func sendMessageBody(body: String)
     func onPageLoadError()
+    func onJavascriptChannelMessageReceived(channelName: String, message: String)
+    func onNavigationRequest(url: String)
+    func onPageFinished(url: String)
+    func onReceivedError(message: String)
+    func onJsAlert(url: String, message: String)
 }
 
 class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
@@ -111,6 +139,7 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     weak var delegate: WebViewControllerDelegate?
     private var configuredJavaScriptChannels: Set<String> = []
     private let defaultURLString = "https://tradingview.com/"
+    private var isChart = true
 
     override init() {
         super.init()
@@ -122,7 +151,9 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         addJavascriptChannel(name: "ChartAppDelegate")
     }
 
-    func loadURL(_ urlString: String, withJavaScriptChannel javaScriptChannelName: String?, plugin: WKScriptMessageHandler) {
+    func loadURL(_ urlString: String, _ isFromChart: Bool, withJavaScriptChannel javaScriptChannelName: String?, plugin: WKScriptMessageHandler) {
+        isChart = isFromChart
+        print("Received loadURL isChart: \(isChart)")
         guard let url = URL(string: urlString), isValidURL(url) else {
             delegate?.onPageLoadError()
             print("Invalid URL provided, loading default URL.")
@@ -198,14 +229,20 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        delegate?.pageDidLoad()
+        print("Received pageDidLoad isChart: \(isChart)")
+        if isChart {
+            delegate?.pageDidLoad(url: webView.url?.absoluteString ?? "")
+        } else {
+            delegate?.onPageFinished(url: webView.url?.absoluteString ?? "")
+        }
     }
 
     @objc public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         print("Received message: \(message.name) with body: \(message.body)")
         if let messageBody = message.body as? String {
             print("Received message from JavaScript: \(messageBody)")
-            delegate?.sendMessageBody(body: messageBody)
+            let channelName = message.name
+            delegate?.onJavascriptChannelMessageReceived(channelName: channelName, message: messageBody)
         }
     }
 }

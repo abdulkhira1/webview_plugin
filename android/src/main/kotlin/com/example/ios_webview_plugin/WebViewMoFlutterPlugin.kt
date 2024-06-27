@@ -130,7 +130,7 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
     }
     override fun onReceivedError(message: String) {
         uiThreadHandler.post {
-            eventSink?.success(mapOf("event" to "error", "url" to message))
+            eventSink?.success(mapOf("event" to "error", "message" to message))
         }
     }
 

@@ -115,11 +115,7 @@ class WebViewManager private constructor(private val context: Context) {
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        if (isFromChart) {
-                            delegate?.pageDidLoad()
-                        } else {
-                            delegate?.onPageFinished(url ?: "")
-                        }
+                        delegate?.onPageFinished(url ?: "")
                     }
 
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -136,7 +132,7 @@ class WebViewManager private constructor(private val context: Context) {
                             error: WebResourceError?
                     ) {
                         super.onReceivedError(view, request, error)
-                        delegate?.onMessageReceived("error")
+                        delegate?.onReceivedError("error")
                         if (isFromChart) {
                             loadDefaultURL()
                         }
@@ -180,11 +176,7 @@ class WebViewManager private constructor(private val context: Context) {
         webView?.addJavascriptInterface(object : Any() {
             @JavascriptInterface
             fun postMessage(message: String) {
-                if (isFromChart) {
-                    delegate?.onMessageReceived(message)
-                } else {
-                    delegate?.onJavascriptChannelMessageReceived(name, message)
-                }
+                delegate?.onJavascriptChannelMessageReceived(name, message)
             }
         }, name)
         configuredJavaScriptChannels.add(name)

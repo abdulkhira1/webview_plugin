@@ -27,11 +27,21 @@ class WebViewMoFlutter: NSObject, FlutterPlatformView {
     private var webView: WKWebView
     private var url: URL?
     private var delegate: WebViewControllerDelegate?
+    private var isChart: Bool = true
 
     init(frame: CGRect, viewIdentifier: Int64, args: Any?, messenger: FlutterBinaryMessenger, delegate: WebViewControllerDelegate?) {
         self.webView = WebViewManager.shared.getWebView(frame: frame)
         self.delegate = delegate
         super.init()
+
+         // Initialize isChart from args
+        if let argsDict = args as? [String: Any], let isChart = argsDict["isChart"] as? Bool {
+            self.isChart = isChart
+        } else {
+            self.isChart = true
+        }
+        print("Received arg isChart: \(isChart)")
+
         if let argsDict = args as? [String: Any], let _ = argsDict["initialUrl"] as? String {
 
             // self.url = URL(string: urlString)
@@ -44,27 +54,17 @@ class WebViewMoFlutter: NSObject, FlutterPlatformView {
         return webView
     }
 
-    // private func loadUrl() {
-    //     // Check if Url is same as loaded in the webview
-    //     // If it is same, then don't load the url again
-    //     if let url = url, webView.url != url {
-    //         print("Loading URL: 2 \(url)")
-    //         webView.load(URLRequest(url: url))
-    //     } else {
-    //         // Optionally, notify delegate or log that the URL load was skipped because it's the same as the current one
-    //         print("Load URL skipped as it's the same as the current URL")
-    //     }
-    // }
-
-    // // Method to evaluate JavaScript
-    // func evaluateJavaScript(_ script: String, completionHandler: @escaping (Any?, Error?) -> Void) {
-    //     webView.evaluateJavaScript(script, completionHandler: completionHandler)
-    // }
+   
 }
 
 extension WebViewMoFlutter: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        delegate?.pageDidLoad()
+        print("Received pageDidLoad2 isChart: \(isChart)")
+       if isChart {
+            delegate?.pageDidLoad(url: webView.url?.absoluteString ?? "")
+        } else {
+            delegate?.onPageFinished(url: webView.url?.absoluteString ?? "")
+        }
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {

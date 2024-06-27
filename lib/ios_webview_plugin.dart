@@ -77,11 +77,9 @@ class IosWebViewPlugin {
     }
   }
 
-  static void getJavaScriptChannelStream(Function(String) callback) {
+  static void getJavaScriptChannelStream(Function(dynamic) callback) {
     _eventChannel.receiveBroadcastStream().listen((event) {
-      if (event != 'pageLoaded') {
-        callback(event);
-      }
+      callback(event);
     });
   }
 
