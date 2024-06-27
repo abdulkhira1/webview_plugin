@@ -119,10 +119,7 @@ class WebViewManager private constructor(private val context: Context) {
                     }
 
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                        if (!isFromChart) {
-                            delegate?.onNavigationRequest(request?.url.toString())
-                            return true
-                        }
+                    
                         return false
                     }
 
@@ -148,6 +145,7 @@ class WebViewManager private constructor(private val context: Context) {
 
     fun loadURL(urlString: String, javaScriptChannelName: String?, isChart: Boolean) {
         isFromChart = isChart
+        Log.d("WebViewMoFlutterPlugin", "loadURL : $urlString")
         if (urlString.isNotEmpty()) {
             if (javaScriptChannelName != null) {
                 addJavascriptChannel(javaScriptChannelName)
