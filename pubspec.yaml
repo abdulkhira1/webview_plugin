@@ -1,4 +1,4 @@
-name: ios_webview_plugin
+name: webview_plugin
 description: "A new Flutter plugin project."
 version: 0.0.1
 homepage:
@@ -40,7 +40,7 @@ flutter:
     # https://flutter.dev/docs/development/packages-and-plugins/developing-packages#plugin-platforms
     # -------------------
       android:
-        package: com.example.ios_webview_plugin
+        package: com.example.webview_plugin
         pluginClass: WebViewMoFlutterPlugin
       ios:
         pluginClass: WebViewMoFlutterPlugin

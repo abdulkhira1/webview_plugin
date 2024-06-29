@@ -1,4 +1,4 @@
-package com.example.ios_webview_plugin
+package com.example.webview_plugin
 
 import android.app.AlertDialog
 import android.content.Context
