@@ -1,8 +1,8 @@
 import 'package:flutter/services.dart';
 
-class IosWebViewPlugin {
-  static const MethodChannel _channel = MethodChannel('webview_mo_flutter');
-  static const EventChannel _eventChannel = EventChannel('webview_plugin_events');
+class CustomWebViewPlugin {
+  static const MethodChannel _channel = MethodChannel('custom_webview_flutter');
+  static const EventChannel _eventChannel = EventChannel('custom_webview_plugin_events');
 
   // Method to open the WebView in iOS
 

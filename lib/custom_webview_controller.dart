@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
-class WebViewMoFlutterController {
-  static const MethodChannel _methodChannel = MethodChannel('webview_mo_flutter');
-  static const EventChannel _eventChannel = EventChannel('webview_plugin_events');
+class CustomWebViewFlutterController {
+  static const MethodChannel _methodChannel = MethodChannel('custom_webview_flutter');
+  static const EventChannel _eventChannel = EventChannel('custom_webview_plugin_events');
 
   Stream<String>? _onPageLoadedStream;
 

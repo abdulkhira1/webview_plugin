@@ -21,10 +21,10 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         context = flutterPluginBinding.applicationContext
-        methodChannel = MethodChannel(flutterPluginBinding.binaryMessenger, "webview_mo_flutter").apply {
+        methodChannel = MethodChannel(flutterPluginBinding.binaryMessenger, "custom_webview_flutter").apply {
             setMethodCallHandler(this@WebViewMoFlutterPlugin)
         }
-        eventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "webview_plugin_events").apply {
+        eventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "custom_webview_plugin_events").apply {
             setStreamHandler(this@WebViewMoFlutterPlugin)
         }
         webViewManager = WebViewManager.getInstance(context)
