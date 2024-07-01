@@ -28,7 +28,7 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
             setStreamHandler(this@WebViewMoFlutterPlugin)
         }
         webViewManager = WebViewManager.getInstance(context)
-        flutterPluginBinding.platformViewRegistry.registerViewFactory("web_view_mo_flutter", WebViewMoFlutterViewFactory(flutterPluginBinding.binaryMessenger, this, webViewManager))
+        flutterPluginBinding.platformViewRegistry.registerViewFactory("custom_webview_flutter", WebViewMoFlutterViewFactory(flutterPluginBinding.binaryMessenger, this, webViewManager))
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {

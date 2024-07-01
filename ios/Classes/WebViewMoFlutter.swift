@@ -15,7 +15,7 @@ public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHan
 
         // Initialize the view factory
         let factory = WebViewMoFlutterViewFactory(messenger: registrar.messenger(), delegate: instance)
-        registrar.register(factory, withId: "web_view_mo_flutter")
+        registrar.register(factory, withId: "custom_webview_flutter")
     }
     
     private var eventSink: FlutterEventSink?
