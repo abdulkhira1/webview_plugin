@@ -32,7 +32,7 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        Log.d("WebViewMoFlutterPlugin", "onDetachedFromEngine")
+        Log.d("CustomWebViewPlugin", "onDetachedFromEngine")
         methodChannel.setMethodCallHandler(null)
         eventChannel.setStreamHandler(null)
         webViewManager.destroyWebView()
@@ -95,7 +95,7 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
     }
 
     override fun onCancel(arguments: Any?) {
-        Log.d("WebViewMoFlutterPlugin", "onCancel")
+        Log.d("CustomWebViewPlugin", "onCancel")
 
         eventSink = null
         webViewManager.delegate = null

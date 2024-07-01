@@ -2,6 +2,7 @@ package com.example.webview_plugin
 
 import android.app.AlertDialog
 import android.content.Context
+import android.os.Build
 import android.os.Message
 import android.util.Log
 import android.view.ViewGroup
@@ -53,7 +54,7 @@ class WebViewMoFlutter(
     override fun getView(): WebView = webView
 
     override fun dispose() {
-        Log.d("WebViewMoFlutterPlugin", "dispose")
+        Log.d("CustomWebViewPlugin", "dispose")
         webViewManager.destroyWebView()
     }
 }
@@ -78,7 +79,7 @@ class WebViewManager private constructor(private val context: Context) {
                 settings.javaScriptCanOpenWindowsAutomatically = true
                 webChromeClient = object : WebChromeClient() {
                     override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
-                        Log.d("WebViewMoFlutterPlugin", "WebViewConsole: ${consoleMessage.message()} at ${consoleMessage.sourceId()}:${consoleMessage.lineNumber()}")
+                        Log.d("CustomWebViewPlugin", "WebViewConsole: ${consoleMessage.message()} at ${consoleMessage.sourceId()}:${consoleMessage.lineNumber()}")
                         return true
                     }
 
@@ -119,17 +120,23 @@ class WebViewManager private constructor(private val context: Context) {
                     }
 
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                    
+                        Log.d("CustomWebViewPlugin", "shouldOverrideUrlLoading === ${view?.url}")
                         return false
                     }
 
                     override fun onReceivedError(
-                            view: WebView?,
-                            request: WebResourceRequest?,
-                            error: WebResourceError?
+                        view: WebView?,
+                        request: WebResourceRequest?,
+                        error: WebResourceError?
                     ) {
                         super.onReceivedError(view, request, error)
-                        delegate?.onReceivedError("error")
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            if(error?.description.toString() != "net::ERR_NAME_NOT_RESOLVED") {
+                                error?.let { delegate?.onReceivedError(it.description.toString()) }
+                            }
+                        } else {
+                            delegate?.onReceivedError("error")
+                        }
                         if (isFromChart) {
                             loadDefaultURL()
                         }
@@ -145,7 +152,7 @@ class WebViewManager private constructor(private val context: Context) {
 
     fun loadURL(urlString: String, javaScriptChannelName: String?, isChart: Boolean) {
         isFromChart = isChart
-        Log.d("WebViewMoFlutterPlugin", "loadURL : $urlString")
+        Log.d("CustomWebViewPlugin", "loadURL : $urlString")
         if (urlString.isNotEmpty()) {
             if (javaScriptChannelName != null) {
                 addJavascriptChannel(javaScriptChannelName)
@@ -170,7 +177,7 @@ class WebViewManager private constructor(private val context: Context) {
 
     fun addJavascriptChannel(name: String): Boolean {
         if (configuredJavaScriptChannels.contains(name)) return false
-        Log.d("WebViewMoFlutterPlugin", "addJavascriptChannel === $name")
+        Log.d("CustomWebViewPlugin", "addJavascriptChannel === $name")
         webView?.addJavascriptInterface(object : Any() {
             @JavascriptInterface
             fun postMessage(message: String) {
@@ -188,7 +195,7 @@ class WebViewManager private constructor(private val context: Context) {
 
     fun destroyWebView() {
         isWebViewPaused = true
-        Log.d("WebViewMoFlutterPlugin", "destroyWebView")
+        Log.d("CustomWebViewPlugin", "destroyWebView")
         webView?.loadUrl("about:blank")
         webView?.onPause()
         webView?.pauseTimers()
