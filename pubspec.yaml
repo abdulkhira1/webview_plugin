@@ -40,10 +40,10 @@ flutter:
     # https://flutter.dev/docs/development/packages-and-plugins/developing-packages#plugin-platforms
     # -------------------
       android:
-        package: com.example.webview_plugin
-        pluginClass: WebViewMoFlutterPlugin
+        package: com.custom.webview_plugin
+        pluginClass: CustomWebViewPlugin
       ios:
-        pluginClass: WebViewMoFlutterPlugin
+        pluginClass: CustomWebViewPlugin
       
     # -------------------
 

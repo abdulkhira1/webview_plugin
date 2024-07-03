@@ -1,4 +1,4 @@
-package com.example.webview_plugin
+package com.custom.webview_plugin
 
 import android.app.AlertDialog
 import android.content.Context
@@ -22,7 +22,7 @@ import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
 
 
-class WebViewMoFlutterViewFactory(
+class CustomWebViewFactory(
         private val messenger: BinaryMessenger,
         private val delegate: WebViewControllerDelegate?,
         private val webViewManager: WebViewManager

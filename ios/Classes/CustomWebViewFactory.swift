@@ -2,7 +2,7 @@ import Flutter
 import UIKit
 import WebKit
 
-class WebViewMoFlutterViewFactory: NSObject, FlutterPlatformViewFactory {
+class CustomWebViewFactory: NSObject, FlutterPlatformViewFactory {
    
     
     private var messenger: FlutterBinaryMessenger

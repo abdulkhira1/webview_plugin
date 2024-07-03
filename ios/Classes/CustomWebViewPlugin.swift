@@ -2,19 +2,19 @@ import Flutter
 import UIKit
 import WebKit
 
-public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHandler, WebViewControllerDelegate {
+public class CustomWebViewPlugin: NSObject, FlutterPlugin, WKScriptMessageHandler, WebViewControllerDelegate {
     private var webView: WKWebView?
     private var channel: FlutterMethodChannel?
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "custom_webview_flutter", binaryMessenger: registrar.messenger())
         let eventChannel = FlutterEventChannel(name: "custom_webview_plugin_events", binaryMessenger: registrar.messenger())
-        let instance = WebViewMoFlutterPlugin()
+        let instance = CustomWebViewPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
         eventChannel.setStreamHandler(instance)
 
         // Initialize the view factory
-        let factory = WebViewMoFlutterViewFactory(messenger: registrar.messenger(), delegate: instance)
+        let factory = CustomWebViewFactory(messenger: registrar.messenger(), delegate: instance)
         registrar.register(factory, withId: "custom_webview_flutter")
     }
     
@@ -107,7 +107,7 @@ public class WebViewMoFlutterPlugin: NSObject, FlutterPlugin, WKScriptMessageHan
 
 }
 
-extension WebViewMoFlutterPlugin: FlutterStreamHandler {
+extension CustomWebViewPlugin: FlutterStreamHandler {
     public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
         self.eventSink = events
         WebViewManager.shared.delegate = self

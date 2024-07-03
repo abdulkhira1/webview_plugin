@@ -1,4 +1,4 @@
-package com.example.webview_plugin
+package com.custom.webview_plugin
 
 import android.content.Context
 import android.os.Handler
@@ -10,7 +10,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 
-class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel.StreamHandler, WebViewControllerDelegate {
+class CustomWebViewPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel.StreamHandler, WebViewControllerDelegate {
 
     private lateinit var methodChannel: MethodChannel
     private lateinit var eventChannel: EventChannel
@@ -22,13 +22,13 @@ class WebViewMoFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, E
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         context = flutterPluginBinding.applicationContext
         methodChannel = MethodChannel(flutterPluginBinding.binaryMessenger, "custom_webview_flutter").apply {
-            setMethodCallHandler(this@WebViewMoFlutterPlugin)
+            setMethodCallHandler(this@CustomWebViewPlugin)
         }
         eventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "custom_webview_plugin_events").apply {
-            setStreamHandler(this@WebViewMoFlutterPlugin)
+            setStreamHandler(this@CustomWebViewPlugin)
         }
         webViewManager = WebViewManager.getInstance(context)
-        flutterPluginBinding.platformViewRegistry.registerViewFactory("custom_webview_flutter", WebViewMoFlutterViewFactory(flutterPluginBinding.binaryMessenger, this, webViewManager))
+        flutterPluginBinding.platformViewRegistry.registerViewFactory("custom_webview_flutter", CustomWebViewFactory(flutterPluginBinding.binaryMessenger, this, webViewManager))
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {

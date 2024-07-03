@@ -1,4 +1,4 @@
-package com.example.webview_plugin
+package com.custom.webview_plugin
 
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
