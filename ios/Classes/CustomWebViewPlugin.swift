@@ -165,12 +165,9 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
             addJavascriptChannel(name: javaScriptChannelName ?? "ChartAppDelegate")
         }
 
-        if webView.url != url {
-            print("Loading URL: \(urlString)")
-            webView.load(URLRequest(url: url))
-        } else {
-            print("Load URL skipped as it's the same as the current URL")
-        }
+        print("Loading URL: \(urlString)")
+        webView.load(URLRequest(url: url))
+        
     }
 
     func getWebView(frame: CGRect) -> WKWebView {
