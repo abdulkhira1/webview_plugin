@@ -133,7 +133,7 @@ protocol WebViewControllerDelegate: AnyObject {
     func onJsAlert(url: String, message: String)
 }
 
-class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler {
     static let shared = WebViewManager()
     var webView: WKWebView!
     weak var delegate: WebViewControllerDelegate?
@@ -145,8 +145,10 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         super.init()
         let configuration = WKWebViewConfiguration()
         configuration.preferences.javaScriptEnabled = true
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
         configuration.preferences.setValue(true, forKey: "developerExtrasEnabled")
         webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.uiDelegate = self
         webView.navigationDelegate = self
         addJavascriptChannel(name: "ChartAppDelegate")
     }
@@ -242,4 +244,24 @@ class WebViewManager: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
             delegate?.onJavascriptChannelMessageReceived(channelName: channelName, message: messageBody)
         }
     }
+
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if let url = navigationAction.request.url {
+            print("NEW WINDOW CREATED with URL: \(url)")
+
+            // Create a new WKWebView with the provided configuration
+            let newWebView = WKWebView(frame: .zero, configuration: configuration)
+            newWebView.uiDelegate = self
+            newWebView.navigationDelegate = self
+
+            self.webView.load(URLRequest(url: url))
+
+            return newWebView
+        }
+        
+        return webView
+    }
+   
+
 }
+
