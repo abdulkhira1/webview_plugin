@@ -1,13 +1,18 @@
 package com.custom.webview_plugin
 
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.os.Build
 import android.os.Message
 import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
+import android.webkit.JsPromptResult
 import android.webkit.JsResult
 import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
@@ -59,24 +64,24 @@ class WebViewMoFlutter(
     }
 }
 
-class WebViewManager private constructor(private val context: Context) {
+class WebViewManager private constructor(private val context: Context, private val activity: Activity?) {
 
     var delegate: WebViewControllerDelegate? = null
     var webView: WebView? = null
         private set
     private val configuredJavaScriptChannels: MutableSet<String> = mutableSetOf()
-    private val defaultURLString = "https://tradingview.com/"
     private var isWebViewPaused: Boolean = false
-    private var isFromChart: Boolean = true
 
+    @SuppressLint("SetJavaScriptEnabled")
     fun getOrCreateWebView(): WebView {
         if (webView == null) {
             configuredJavaScriptChannels.clear()
-            webView = WebView(context).apply {
+            webView = WebView(activity ?: context).apply {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.cacheMode = WebSettings.LOAD_DEFAULT
                 settings.javaScriptCanOpenWindowsAutomatically = true
+                settings.setSupportMultipleWindows(true)
                 webChromeClient = object : WebChromeClient() {
                     override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
                         Log.d("CustomWebViewPlugin", "WebViewConsole: ${consoleMessage.message()} at ${consoleMessage.sourceId()}:${consoleMessage.lineNumber()}")
@@ -84,9 +89,36 @@ class WebViewManager private constructor(private val context: Context) {
                     }
 
                     override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                        Log.d("CustomWebViewPlugin", "onJsAlert: $message")
                         delegate?.onJsAlert(url, message)
+                        result?.confirm()
                         return true
                     }
+
+                    override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                        Log.d("CustomWebViewPlugin", "onJsConfirm: $message")
+                        delegate?.onJsAlert(url, message)
+                        result?.confirm()
+                        return true
+                    }
+
+                    override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                        Log.d("CustomWebViewPlugin", "onShowCustomView: $view")
+                        super.onShowCustomView(view, callback)
+
+                    }
+
+                    override fun onJsPrompt(
+                        view: WebView?,
+                        url: String?,
+                        message: String?,
+                        defaultValue: String?,
+                        result: JsPromptResult?
+                    ): Boolean {
+                        Log.d("CustomWebViewPlugin", "onJsPrompt: $message")
+                        return super.onJsPrompt(view, url, message, defaultValue, result)
+                    }
+
 
                     override fun onPermissionRequest(request: PermissionRequest?) {
                         super.onPermissionRequest(request)
@@ -137,9 +169,7 @@ class WebViewManager private constructor(private val context: Context) {
                         } else {
                             delegate?.onReceivedError("error")
                         }
-                        if (isFromChart) {
-                            loadDefaultURL()
-                        }
+
                     }
 
 
@@ -150,16 +180,13 @@ class WebViewManager private constructor(private val context: Context) {
         return webView!!
     }
 
-    fun loadURL(urlString: String, javaScriptChannelName: String?, isChart: Boolean) {
-        isFromChart = isChart
+    fun loadURL(urlString: String, javaScriptChannelName: String?) {
         Log.d("CustomWebViewPlugin", "loadURL : $urlString")
         if (urlString.isNotEmpty()) {
             if (javaScriptChannelName != null) {
                 addJavascriptChannel(javaScriptChannelName)
             }
             webView?.loadUrl(urlString)
-        } else {
-            loadDefaultURL()
         }
         if (isWebViewPaused) resumeWebView()
     }
@@ -188,19 +215,12 @@ class WebViewManager private constructor(private val context: Context) {
         return true
     }
 
-
-    private fun loadDefaultURL() {
-        webView?.loadUrl(defaultURLString)
-    }
-
     fun destroyWebView() {
         isWebViewPaused = true
         Log.d("CustomWebViewPlugin", "destroyWebView")
         webView?.loadUrl("about:blank")
         webView?.onPause()
         webView?.pauseTimers()
-//        webView?.destroy()
-//        webView = null
     }
 
     fun resumeWebView() {
@@ -212,9 +232,9 @@ class WebViewManager private constructor(private val context: Context) {
     companion object {
         private var INSTANCE: WebViewManager? = null
 
-        fun getInstance(context: Context): WebViewManager {
+        fun getInstance(context: Context, activity: Activity?): WebViewManager {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: WebViewManager(context.applicationContext).also { INSTANCE = it }
+                INSTANCE ?: WebViewManager(context.applicationContext, activity).also { INSTANCE = it }
             }
         }
     }

@@ -1,34 +1,59 @@
 package com.custom.webview_plugin
 
+import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 
-class CustomWebViewPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel.StreamHandler, WebViewControllerDelegate {
+class CustomWebViewPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandler, EventChannel.StreamHandler, WebViewControllerDelegate {
 
     private lateinit var methodChannel: MethodChannel
     private lateinit var eventChannel: EventChannel
     private var eventSink: EventChannel.EventSink? = null
-    private lateinit var context: Context
     private lateinit var webViewManager: WebViewManager
+    private var activity: Activity? = null
+    private lateinit var context: Context
     private val uiThreadHandler: Handler = Handler(Looper.getMainLooper())
+    private lateinit var flutterPluginBinding: FlutterPlugin.FlutterPluginBinding
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+        this.flutterPluginBinding = flutterPluginBinding
         context = flutterPluginBinding.applicationContext
+
         methodChannel = MethodChannel(flutterPluginBinding.binaryMessenger, "custom_webview_flutter").apply {
             setMethodCallHandler(this@CustomWebViewPlugin)
         }
         eventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "custom_webview_plugin_events").apply {
             setStreamHandler(this@CustomWebViewPlugin)
         }
-        webViewManager = WebViewManager.getInstance(context)
+
+    }
+
+
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        activity = binding.activity
+        webViewManager = WebViewManager.getInstance(context, activity)
         flutterPluginBinding.platformViewRegistry.registerViewFactory("custom_webview_flutter", CustomWebViewFactory(flutterPluginBinding.binaryMessenger, this, webViewManager))
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {
+        TODO("Not yet implemented")
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onDetachedFromActivity() {
+        TODO("Not yet implemented")
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -43,9 +68,8 @@ class CustomWebViewPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Even
             "loadUrl" -> {
                 val urlString = call.argument<String>("initialUrl")
                 val javaScriptChannelName = call.argument<String>("javaScriptChannelName")
-                val isChart = call.argument<Boolean>("isChart") ?: true
                 if (urlString != null) {
-                    webViewManager.loadURL(urlString, javaScriptChannelName, isChart)
+                    webViewManager.loadURL(urlString, javaScriptChannelName)
                     result.success(null)
                 } else {
                     result.error("INVALID_ARGUMENT", "URL is required", null)
@@ -139,6 +163,7 @@ class CustomWebViewPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Even
             eventSink?.success(mapOf("event" to "onJsAlert", "url" to url, "message" to message))
         }
     }
+
 
 
 }
