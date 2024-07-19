@@ -138,7 +138,6 @@ class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMess
     var webView: WKWebView!
     weak var delegate: WebViewControllerDelegate?
     private var configuredJavaScriptChannels: Set<String> = []
-    private let defaultURLString = "https://tradingview.com/"
     private var isChart = true
 
     override init() {
@@ -159,7 +158,6 @@ class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMess
         guard let url = URL(string: urlString), isValidURL(url) else {
             delegate?.onPageLoadError()
             print("Invalid URL provided, loading default URL.")
-            loadDefaultURL()
             return
         }
 
@@ -214,14 +212,9 @@ class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMess
     private func handleLoadingError() {
         delegate?.onPageLoadError()
         print("Failed to load URL, navigating to default URL.")
-        loadDefaultURL()
     }
 
-    private func loadDefaultURL() {
-        if let defaultURL = URL(string: defaultURLString) {
-            webView.load(URLRequest(url: defaultURL))
-        }
-    }
+   
 
     private func isValidURL(_ url: URL) -> Bool {
         return UIApplication.shared.canOpenURL(url)
