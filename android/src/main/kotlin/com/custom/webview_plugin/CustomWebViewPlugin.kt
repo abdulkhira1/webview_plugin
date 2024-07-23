@@ -68,8 +68,10 @@ class CustomWebViewPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCa
             "loadUrl" -> {
                 val urlString = call.argument<String>("initialUrl")
                 val javaScriptChannelName = call.argument<String>("javaScriptChannelName")
+                val zoomEnabled = call.argument<Boolean>("zoomEnabled")
                 if (urlString != null) {
                     webViewManager.loadURL(urlString, javaScriptChannelName)
+                    webViewManager.enableZoom(zoomEnabled ?: false)
                     result.success(null)
                 } else {
                     result.error("INVALID_ARGUMENT", "URL is required", null)

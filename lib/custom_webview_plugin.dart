@@ -13,10 +13,14 @@ class CustomWebViewPlugin {
   Stream<String> get onMessageReceived => _onMessageReceivedStream!;
 
   static Future<void> openWebView(String url,
-      {String? javascriptChannelName, bool? isChart}) async {
+      {String? javascriptChannelName, bool? isChart, bool? isZoomEnabled}) async {
     try {
-      await _channel.invokeMethod('loadUrl',
-          {'initialUrl': url, 'javaScriptChannelName': javascriptChannelName, 'isChart': isChart});
+      await _channel.invokeMethod('loadUrl', {
+        'initialUrl': url,
+        'javaScriptChannelName': javascriptChannelName,
+        'isChart': isChart,
+        'zoomEnabled': isZoomEnabled
+      });
     } on PlatformException catch (e) {
       print("Failed to open WebView: '${e.message}'.");
     }

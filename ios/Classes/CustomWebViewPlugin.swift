@@ -27,8 +27,9 @@ public class CustomWebViewPlugin: NSObject, FlutterPlugin, WKScriptMessageHandle
                let urlString = args["initialUrl"] as? String {
                 let javaScriptChannelName = args["javaScriptChannelName"] as? String
                 let isChart = args["isChart"] as? Bool ?? true
-                print("Received isChart: \(isChart)")
-                WebViewManager.shared.loadURL(urlString, isChart, withJavaScriptChannel: javaScriptChannelName, plugin: self)
+                let zoomEnabled = args["zoomEnabled"] as? Bool ?? false
+                print("Received isChart: \(isChart), zoomEnabled: \(zoomEnabled)")
+                WebViewManager.shared.loadURL(urlString, isChart, withJavaScriptChannel: javaScriptChannelName, zoomEnabled: zoomEnabled, plugin: self)
                 result(nil)
             } else {
                 result(FlutterError(code: "INVALID_ARGUMENT", message: "URL is required", details: nil))
@@ -152,9 +153,10 @@ class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMess
         addJavascriptChannel(name: "ChartAppDelegate")
     }
 
-    func loadURL(_ urlString: String, _ isFromChart: Bool, withJavaScriptChannel javaScriptChannelName: String?, plugin: WKScriptMessageHandler) {
+    func loadURL(_ urlString: String, _ isFromChart: Bool, withJavaScriptChannel javaScriptChannelName: String?, zoomEnabled: Bool, plugin: WKScriptMessageHandler) {
         isChart = isFromChart
-        print("Received loadURL isChart: \(isChart)")
+        configureZoom(enabled: zoomEnabled)
+        print("Received loadURL isChart: \(isChart), zoomEnabled: \(zoomEnabled)")
         guard let url = URL(string: urlString), isValidURL(url) else {
             delegate?.onPageLoadError()
             print("Invalid URL provided, loading default URL.")
@@ -173,6 +175,11 @@ class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMess
     func getWebView(frame: CGRect) -> WKWebView {
         webView?.frame = frame
         return webView!
+    }
+
+    func configureZoom(enabled: Bool) {
+        webView?.scrollView.isScrollEnabled = enabled
+        webView?.scrollView.pinchGestureRecognizer?.isEnabled = enabled
     }
 
     func evaluateJavaScript(_ script: String, completionHandler: @escaping (Any?, Error?) -> Void) {

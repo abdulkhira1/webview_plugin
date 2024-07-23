@@ -191,6 +191,15 @@ class WebViewManager private constructor(private val context: Context, private v
         if (isWebViewPaused) resumeWebView()
     }
 
+    fun enableZoom(isZoomEnable: Boolean) {
+        Log.d("CustomWebViewPlugin", "enableZoom : $isZoomEnable")
+        webView?.settings?.setSupportZoom(isZoomEnable)
+        webView?.settings?.builtInZoomControls = isZoomEnable
+        webView?.getSettings()?.setSupportZoom(isZoomEnable)
+        webView?.getSettings()?.builtInZoomControls = isZoomEnable
+        webView?.getSettings()?.displayZoomControls = false
+    }
+
     fun evaluateJavaScript(script: String, completionHandler: (Any?, Throwable?) -> Unit) {
         if (isWebViewPaused) resumeWebView()
         webView?.evaluateJavascript(script) { result ->
