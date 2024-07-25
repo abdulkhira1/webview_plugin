@@ -27,7 +27,7 @@ public class CustomWebViewPlugin: NSObject, FlutterPlugin, WKScriptMessageHandle
                let urlString = args["initialUrl"] as? String {
                 let javaScriptChannelName = args["javaScriptChannelName"] as? String
                 let isChart = args["isChart"] as? Bool ?? true
-                let zoomEnabled = args["zoomEnabled"] as? Bool ?? false
+                let zoomEnabled = args["zoomEnabled"] as? Bool ?? true
                 print("Received isChart: \(isChart), zoomEnabled: \(zoomEnabled)")
                 WebViewManager.shared.loadURL(urlString, isChart, withJavaScriptChannel: javaScriptChannelName, zoomEnabled: zoomEnabled, plugin: self)
                 result(nil)
@@ -176,10 +176,23 @@ class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMess
         webView?.frame = frame
         return webView!
     }
-
-    func configureZoom(enabled: Bool) {
-        webView?.scrollView.isScrollEnabled = enabled
+    
+    private func configureZoom(enabled: Bool) {
+        webView?.scrollView.isScrollEnabled = true
         webView?.scrollView.pinchGestureRecognizer?.isEnabled = enabled
+        
+        if !enabled {
+            let zoomDisableScript = getZoomDisableScript()
+            webView?.configuration.userContentController.addUserScript(zoomDisableScript)
+        }
+    }
+
+    private func getZoomDisableScript() -> WKUserScript {
+        let source: String = "var meta = document.createElement('meta');" +
+            "meta.name = 'viewport';" +
+            "meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';" +
+            "var head = document.getElementsByTagName('head')[0];" + "head.appendChild(meta);"
+        return WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
     }
 
     func evaluateJavaScript(_ script: String, completionHandler: @escaping (Any?, Error?) -> Void) {
@@ -221,8 +234,6 @@ class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMess
         print("Failed to load URL, navigating to default URL.")
     }
 
-   
-
     private func isValidURL(_ url: URL) -> Bool {
         return UIApplication.shared.canOpenURL(url)
     }
@@ -261,7 +272,4 @@ class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMess
         
         return webView
     }
-   
-
 }
-
