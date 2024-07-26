@@ -74,14 +74,13 @@ class WebViewManager private constructor(private val context: Context, private v
 
     @SuppressLint("SetJavaScriptEnabled")
     fun getOrCreateWebView(): WebView {
-        if (webView == null) {
+       if (webView == null) {
             configuredJavaScriptChannels.clear()
             webView = WebView(activity ?: context).apply {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.cacheMode = WebSettings.LOAD_DEFAULT
                 settings.javaScriptCanOpenWindowsAutomatically = true
-                settings.setSupportMultipleWindows(true)
                 webChromeClient = object : WebChromeClient() {
                     override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
                         Log.d("CustomWebViewPlugin", "WebViewConsole: ${consoleMessage.message()} at ${consoleMessage.sourceId()}:${consoleMessage.lineNumber()}")
@@ -89,36 +88,9 @@ class WebViewManager private constructor(private val context: Context, private v
                     }
 
                     override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
-                        Log.d("CustomWebViewPlugin", "onJsAlert: $message")
                         delegate?.onJsAlert(url, message)
-                        result?.confirm()
                         return true
                     }
-
-                    override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
-                        Log.d("CustomWebViewPlugin", "onJsConfirm: $message")
-                        delegate?.onJsAlert(url, message)
-                        result?.confirm()
-                        return true
-                    }
-
-                    override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
-                        Log.d("CustomWebViewPlugin", "onShowCustomView: $view")
-                        super.onShowCustomView(view, callback)
-
-                    }
-
-                    override fun onJsPrompt(
-                        view: WebView?,
-                        url: String?,
-                        message: String?,
-                        defaultValue: String?,
-                        result: JsPromptResult?
-                    ): Boolean {
-                        Log.d("CustomWebViewPlugin", "onJsPrompt: $message")
-                        return super.onJsPrompt(view, url, message, defaultValue, result)
-                    }
-
 
                     override fun onPermissionRequest(request: PermissionRequest?) {
                         super.onPermissionRequest(request)
@@ -169,7 +141,6 @@ class WebViewManager private constructor(private val context: Context, private v
                         } else {
                             delegate?.onReceivedError("error")
                         }
-
                     }
 
 
@@ -227,9 +198,13 @@ class WebViewManager private constructor(private val context: Context, private v
     fun destroyWebView() {
         isWebViewPaused = true
         Log.d("CustomWebViewPlugin", "destroyWebView")
-        webView?.loadUrl("about:blank")
-        webView?.onPause()
-        webView?.pauseTimers()
+     //   webView?.loadUrl("about:blank")
+     //   webView?.onPause()
+     //   webView?.pauseTimers()
+        webView?.apply {
+            destroy()
+        }
+        webView = null
     }
 
     fun resumeWebView() {
