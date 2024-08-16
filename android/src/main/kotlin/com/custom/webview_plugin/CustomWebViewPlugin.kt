@@ -2,6 +2,7 @@ package com.custom.webview_plugin
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -13,7 +14,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 
-class CustomWebViewPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandler, EventChannel.StreamHandler, WebViewControllerDelegate {
+class CustomWebViewPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandler,  EventChannel.StreamHandler, WebViewControllerDelegate {
 
     private lateinit var methodChannel: MethodChannel
     private lateinit var eventChannel: EventChannel
@@ -165,7 +166,6 @@ class CustomWebViewPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCa
             eventSink?.success(mapOf("event" to "onJsAlert", "url" to url, "message" to message))
         }
     }
-
 
 
 }
