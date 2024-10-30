@@ -11,6 +11,7 @@ import android.os.Message
 import android.provider.OpenableColumns
 import android.util.Log
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.JsResult
@@ -137,6 +138,8 @@ class WebViewManager private constructor(
                 settings.domStorageEnabled = true
                 settings.cacheMode = WebSettings.LOAD_DEFAULT
                 settings.javaScriptCanOpenWindowsAutomatically = true
+                settings.setSupportMultipleWindows(true)
+
                 webChromeClient = object : WebChromeClient() {
                     override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
                         Log.d(
@@ -179,22 +182,39 @@ class WebViewManager private constructor(
                         isUserGesture: Boolean,
                         resultMsg: Message?
                     ): Boolean {
-                        val newWebView = WebView(context)
-                        val webSettings = newWebView.settings
-                        webSettings.javaScriptEnabled = true
-                        webSettings.javaScriptCanOpenWindowsAutomatically = true
+                        // Setup the popup WebView
+                        val popupWebView = WebView(activity ?: context).apply {
+                            settings.javaScriptEnabled = true
+                            settings.javaScriptCanOpenWindowsAutomatically = true
+                        }
 
-                        val dialog = AlertDialog.Builder(context)
-                        dialog.setView(newWebView)
-                            .setPositiveButton("Close") { dialogInterface, i ->
-                                (newWebView.parent as ViewGroup).removeView(newWebView)
-                                dialogInterface.dismiss()
+                        popupWebView.webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                Log.d("WebPageActivity", "Popup WebView URL: ${request?.url}")
+                                return false
                             }
-                            .show()
+                        }
 
-                        val transport = resultMsg!!.obj as WebView.WebViewTransport
-                        transport.webView = newWebView
-                        resultMsg.sendToTarget()
+                        popupWebView.webChromeClient = object : WebChromeClient() {
+                            override fun onCloseWindow(window: WebView) {
+                                Log.d("WebPageActivity", "Popup WebView closed")
+                                popupWebView.destroy()
+                            }
+                        }
+
+                        // Display the popup WebView in a dialog
+                        val dialog =  AlertDialog.Builder(activity ?: context).apply {
+                            setView(popupWebView)
+                            setOnDismissListener { popupWebView.destroy() }
+                        }.create()
+                        // Set the soft input mode to adjust when the dialog is displayed
+                        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+                        dialog.show()
+                        // Connect the popup WebView to the main WebView
+                        resultMsg?.apply {
+                            (obj as WebView.WebViewTransport).webView = popupWebView
+                            sendToTarget()
+                        }
                         return true
                     }
                 }
@@ -208,7 +228,18 @@ class WebViewManager private constructor(
                         view: WebView?,
                         request: WebResourceRequest?
                     ): Boolean {
+                        val url = request?.url.toString()
                         Log.d("CustomWebViewPlugin", "shouldOverrideUrlLoading === ${view?.url}")
+                         // Check if URL is from an external domain
+//                        if (url.contains("https://partner.tejimandi.com")) {
+//                            // Example: You could use `postMessage` or handle cross-origin communication here
+//                            view?.evaluateJavascript("""
+//                                window.parent.postMessage('Hello from WebView', 'https://partner.tejimandi.com');
+//                            """.trimIndent()) { result ->
+//                                Log.d("CustomWebViewPlugin", "JavaScript executed: $result")
+//                            }
+//                            return true // Indicates we handled it manually
+//                        }
                         return false
                     }
 
