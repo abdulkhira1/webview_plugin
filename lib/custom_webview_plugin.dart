@@ -13,13 +13,14 @@ class CustomWebViewPlugin {
   Stream<String> get onMessageReceived => _onMessageReceivedStream!;
 
   static Future<void> openWebView(String url,
-      {String? javascriptChannelName, bool? isChart, bool? isZoomEnabled}) async {
+      {String? javascriptChannelName, bool? isChart, bool? isZoomEnabled, bool? enableMultipleWindows}) async {
     try {
       await _channel.invokeMethod('loadUrl', {
         'initialUrl': url,
         'javaScriptChannelName': javascriptChannelName,
         'isChart': isChart,
-        'zoomEnabled': isZoomEnabled
+        'zoomEnabled': isZoomEnabled,
+        'enableMultipleWindows': enableMultipleWindows,
       });
     } on PlatformException catch (e) {
       print("Failed to open WebView: '${e.message}'.");
@@ -63,6 +64,14 @@ class CustomWebViewPlugin {
       await _channel.invokeMethod('runJavaScript', {'script': script});
     } on PlatformException catch (e) {
       print("Failed to run JavaScript: '${e.message}'.");
+    }
+  }
+
+  static Future<void> enableMultipleWindows() async {
+    try {
+      await _channel.invokeMethod('enableMultipleWindows');
+    } on PlatformException catch (e) {
+      print("Failed to renableMultipleWindows: '${e.message}'.");
     }
   }
 

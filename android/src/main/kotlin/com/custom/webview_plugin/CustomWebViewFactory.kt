@@ -138,7 +138,7 @@ class WebViewManager private constructor(
                 settings.domStorageEnabled = true
                 settings.cacheMode = WebSettings.LOAD_DEFAULT
                 settings.javaScriptCanOpenWindowsAutomatically = true
-                settings.setSupportMultipleWindows(true)
+//                settings.setSupportMultipleWindows(true)
 
                 webChromeClient = object : WebChromeClient() {
                     override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
@@ -182,14 +182,16 @@ class WebViewManager private constructor(
                         isUserGesture: Boolean,
                         resultMsg: Message?
                     ): Boolean {
-                        // Setup the popup WebView
                         val popupWebView = WebView(activity ?: context).apply {
                             settings.javaScriptEnabled = true
                             settings.javaScriptCanOpenWindowsAutomatically = true
+                            settings.setSupportMultipleWindows(true)
                         }
-
                         popupWebView.webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView?,
+                                request: WebResourceRequest?
+                            ): Boolean {
                                 Log.d("WebPageActivity", "Popup WebView URL: ${request?.url}")
                                 return false
                             }
@@ -200,21 +202,51 @@ class WebViewManager private constructor(
                                 Log.d("WebPageActivity", "Popup WebView closed")
                                 popupWebView.destroy()
                             }
+                            override fun onJsAlert(
+                                view: WebView?,
+                                url: String?,
+                                message: String?,
+                                result: JsResult?
+                            ): Boolean {
+                                delegate?.onJsAlert(url, message)
+                                return true
+                            }
+
+                            override fun onPermissionRequest(request: PermissionRequest?) {
+                                super.onPermissionRequest(request)
+                                request?.grant(request.resources)
+                            }
+
+                            override fun onShowFileChooser(
+                                webView: WebView?,
+                                filePathCallback: ValueCallback<Array<Uri>>,
+                                fileChooserParams: WebChromeClient.FileChooserParams
+                            ): Boolean {
+                                Log.d("CustomWebViewPlugin", "onShowFileChooser === ${fileChooserParams.mode}")
+                                setFilePathCallback(filePathCallback)
+                                openFileChooser()
+                                return true
+                            }
                         }
 
                         // Display the popup WebView in a dialog
-                        val dialog =  AlertDialog.Builder(activity ?: context).apply {
+                        val dialog = AlertDialog.Builder(activity ?: context).apply {
                             setView(popupWebView)
                             setOnDismissListener { popupWebView.destroy() }
+                        }.setPositiveButton("Close") { dialogInterface, i ->
+                            (popupWebView.parent as ViewGroup).removeView(popupWebView)
+                            dialogInterface.dismiss()
                         }.create()
                         // Set the soft input mode to adjust when the dialog is displayed
-                        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-                        dialog.show()
-                        // Connect the popup WebView to the main WebView
-                        resultMsg?.apply {
-                            (obj as WebView.WebViewTransport).webView = popupWebView
-                            sendToTarget()
+                        dialog.window?.apply {
+                            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
                         }
+
+                        dialog.show()
+
+                        val transport = resultMsg!!.obj as WebView.WebViewTransport
+                        transport.webView = popupWebView
+                        resultMsg.sendToTarget()
                         return true
                     }
                 }
@@ -228,18 +260,7 @@ class WebViewManager private constructor(
                         view: WebView?,
                         request: WebResourceRequest?
                     ): Boolean {
-                        val url = request?.url.toString()
                         Log.d("CustomWebViewPlugin", "shouldOverrideUrlLoading === ${view?.url}")
-                         // Check if URL is from an external domain
-//                        if (url.contains("https://partner.tejimandi.com")) {
-//                            // Example: You could use `postMessage` or handle cross-origin communication here
-//                            view?.evaluateJavascript("""
-//                                window.parent.postMessage('Hello from WebView', 'https://partner.tejimandi.com');
-//                            """.trimIndent()) { result ->
-//                                Log.d("CustomWebViewPlugin", "JavaScript executed: $result")
-//                            }
-//                            return true // Indicates we handled it manually
-//                        }
                         return false
                     }
 
@@ -284,6 +305,10 @@ class WebViewManager private constructor(
         webView?.getSettings()?.setSupportZoom(isZoomEnable)
         webView?.getSettings()?.builtInZoomControls = isZoomEnable
         webView?.getSettings()?.displayZoomControls = false
+    }
+
+    fun enableMultipleWindows(isMultipleWindowsEnable: Boolean) {
+        webView?.settings?.setSupportMultipleWindows(isMultipleWindowsEnable)
     }
 
     fun evaluateJavaScript(script: String, completionHandler: (Any?, Throwable?) -> Unit) {
