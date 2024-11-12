@@ -3,10 +3,12 @@ package com.custom.webview_plugin
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.os.Message
 import android.provider.OpenableColumns
 import android.util.Log
@@ -16,6 +18,7 @@ import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.JsResult
 import android.webkit.PermissionRequest
+import android.webkit.URLUtil
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -193,8 +196,16 @@ class WebViewManager private constructor(
                                 request: WebResourceRequest?
                             ): Boolean {
                                 Log.d("WebPageActivity", "Popup WebView URL: ${request?.url}")
+                                val url = request?.url.toString()
+                                if (url.endsWith(".pdf") || url.contains("download")) {
+                                    // Handle file download directly
+                                    val downloadIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                    context.startActivity(downloadIntent)
+                                    return true // Download handled, do not load in WebView
+                                }
                                 return false
                             }
+
                         }
 
                         popupWebView.webChromeClient = object : WebChromeClient() {
@@ -261,6 +272,13 @@ class WebViewManager private constructor(
                         request: WebResourceRequest?
                     ): Boolean {
                         Log.d("CustomWebViewPlugin", "shouldOverrideUrlLoading === ${view?.url}")
+                        val url = request?.url.toString()
+                        if (url.endsWith(".pdf") || url.contains("download") || url.contains("SH=")) {
+                            // Handle file download directly
+                            val downloadIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            context.startActivity(downloadIntent)
+                            return true // Download handled, do not load in WebView
+                        }
                         return false
                     }
 
@@ -282,6 +300,18 @@ class WebViewManager private constructor(
 
                 }
 
+            }
+            webView!!.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+                val request = DownloadManager.Request(Uri.parse(url))
+                request.setMimeType(mimeType)
+                request.addRequestHeader("User-Agent", userAgent)
+                request.setTitle(URLUtil.guessFileName(url, contentDisposition, mimeType))
+                request.setDescription("Downloading file...")
+                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, URLUtil.guessFileName(url, contentDisposition, mimeType))
+
+                val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                dm.enqueue(request)
             }
         }
         return webView!!
