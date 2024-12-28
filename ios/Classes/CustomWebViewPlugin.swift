@@ -34,6 +34,21 @@ public class CustomWebViewPlugin: NSObject, FlutterPlugin, WKScriptMessageHandle
             } else {
                 result(FlutterError(code: "INVALID_ARGUMENT", message: "URL is required", details: nil))
             }
+        case "loadHtmlData":
+    if let args = call.arguments as? [String: Any],
+       let htmlString = args["htmlString"] as? String {
+        let baseURLString = args["baseURL"] as? String
+        let baseURL = baseURLString != nil ? URL(string: baseURLString!) : nil
+        let javaScriptChannelName = args["javaScriptChannelName"] as? String // New parameter
+        WebViewManager.shared.loadHtmlData(
+            htmlString: htmlString,
+            baseURL: baseURL,
+            javaScriptChannelName: javaScriptChannelName
+        )
+        result(nil)
+    } else {
+        result(FlutterError(code: "INVALID_ARGUMENT", message: "HTML string is required", details: nil))
+    }
         case "runJavaScript":
             if let script = (call.arguments as? [String: Any])?["script"] as? String {
                 WebViewManager.shared.evaluateJavaScript(script, completionHandler: { (response, error) in
@@ -108,6 +123,8 @@ public class CustomWebViewPlugin: NSObject, FlutterPlugin, WKScriptMessageHandle
 
 }
 
+
+
 extension CustomWebViewPlugin: FlutterStreamHandler {
     public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
         self.eventSink = events
@@ -172,6 +189,18 @@ class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMess
         
     }
 
+    func loadHtmlData(htmlString: String, baseURL: URL?, javaScriptChannelName: String?) {
+    print("Loading HTML data...")
+
+    // Add JavaScript channel if provided
+    if let channelName = javaScriptChannelName, !channelName.isEmpty {
+        addJavascriptChannel(name: channelName)
+    }
+
+    // Load the HTML string
+    webView.loadHTMLString(htmlString, baseURL: baseURL)
+}
+
     func getWebView(frame: CGRect) -> WKWebView {
         webView?.frame = frame
         return webView!
@@ -212,8 +241,8 @@ class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMess
         let wrapperSource = "window.\(name) = webkit.messageHandlers.\(name);"
         let wrapperScript = WKUserScript(
             source: wrapperSource,
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: false
+            injectionTime: WKUserScriptInjectionTime.atDocumentStart,
+            forMainFrameOnly: true
         )
         webView.configuration.userContentController.addUserScript(wrapperScript)
         webView.configuration.userContentController.add(self, name: name)
@@ -221,55 +250,39 @@ class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMess
         return true
     }
 
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        handleLoadingError()
-    }
-
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        handleLoadingError()
-    }
-
-    private func handleLoadingError() {
-        delegate?.onPageLoadError()
-        print("Failed to load URL, navigating to default URL.")
-    }
-
-    private func isValidURL(_ url: URL) -> Bool {
+    func isValidURL(_ url: URL) -> Bool {
         return UIApplication.shared.canOpenURL(url)
     }
 
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        print("Started Loading: \(String(describing: webView.url))")
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        print("Received pageDidLoad isChart: \(isChart)")
-        if isChart {
-            delegate?.pageDidLoad(url: webView.url?.absoluteString ?? "")
-        } else {
-            delegate?.onPageFinished(url: webView.url?.absoluteString ?? "")
+        print("Finished Loading: \(String(describing: webView.url))")
+        if let url = webView.url?.absoluteString {
+            delegate?.onPageFinished(url: url)
         }
     }
 
-    @objc public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        print("Received message: \(message.name) with body: \(message.body)")
-        if let messageBody = message.body as? String {
-            print("Received message from JavaScript: \(messageBody)")
-            let channelName = message.name
-            delegate?.onJavascriptChannelMessageReceived(channelName: channelName, message: messageBody)
-        }
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        print("Error loading page: \(error.localizedDescription)")
+        delegate?.onReceivedError(message: error.localizedDescription)
     }
 
-    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if let url = navigationAction.request.url {
-            print("NEW WINDOW CREATED with URL: \(url)")
+    func webView(_ webView: WKWebView, didReceive serverRedirectForProvisionalNavigation: WKNavigation!) {
+        print("Redirect detected.")
+    }
 
-            // Create a new WKWebView with the provided configuration
-            let newWebView = WKWebView(frame: .zero, configuration: configuration)
-            newWebView.uiDelegate = self
-            newWebView.navigationDelegate = self
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+        print("JavaScript Alert: \(message)")
+        completionHandler()
+    }
 
-            self.webView.load(URLRequest(url: url))
-
-            return newWebView
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        print("Message received: \(message.name)")
+        if let body = message.body as? String {
+            delegate?.sendMessageBody(body: body)
         }
-        
-        return webView
     }
 }

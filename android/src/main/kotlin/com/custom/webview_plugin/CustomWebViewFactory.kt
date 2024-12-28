@@ -317,6 +317,18 @@ class WebViewManager private constructor(
         return webView!!
     }
 
+
+    fun loadHtmlContent(htmlContent: String, javaScriptChannelName: String?) {
+    // Load the HTML content into the WebView
+    webView?.loadDataWithBaseURL("file:///android_res/drawable/", htmlContent, "text/html", "UTF-8", null)
+
+    // If a JavaScript channel name is provided, bind it
+    if (!javaScriptChannelName.isNullOrEmpty()) {
+        addJavascriptChannel(javaScriptChannelName)
+    }
+        if (isWebViewPaused) resumeWebView()
+}
+
     fun loadURL(urlString: String, javaScriptChannelName: String?) {
         Log.d("CustomWebViewPlugin", "loadURL : $urlString")
         if (urlString.isNotEmpty()) {
