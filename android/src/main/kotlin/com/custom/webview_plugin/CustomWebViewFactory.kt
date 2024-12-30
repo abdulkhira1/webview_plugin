@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Environment
 import android.os.Message
 import android.provider.OpenableColumns
+import android.util.Base64
 import android.util.Log
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -81,7 +82,6 @@ class WebViewManager private constructor(
 
     var delegate: WebViewControllerDelegate? = null
     var webView: WebView? = null
-        private set
     private val configuredJavaScriptChannels: MutableSet<String> = mutableSetOf()
     private var isWebViewPaused: Boolean = false
 
@@ -89,7 +89,6 @@ class WebViewManager private constructor(
     private var mUploadMessageArray: ValueCallback<Array<Uri?>>? = null
     val fileUri: Uri? = null
     val videoUri: Uri? = null
-
 
 
     private val fileChooserLauncher = activity?.let {
@@ -128,7 +127,6 @@ class WebViewManager private constructor(
     fun setFilePathCallback(callback: ValueCallback<Array<Uri>>) {
         mUploadMessage = callback
     }
-
 
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -213,6 +211,7 @@ class WebViewManager private constructor(
                                 Log.d("WebPageActivity", "Popup WebView closed")
                                 popupWebView.destroy()
                             }
+
                             override fun onJsAlert(
                                 view: WebView?,
                                 url: String?,
@@ -233,7 +232,10 @@ class WebViewManager private constructor(
                                 filePathCallback: ValueCallback<Array<Uri>>,
                                 fileChooserParams: WebChromeClient.FileChooserParams
                             ): Boolean {
-                                Log.d("CustomWebViewPlugin", "onShowFileChooser === ${fileChooserParams.mode}")
+                                Log.d(
+                                    "CustomWebViewPlugin",
+                                    "onShowFileChooser === ${fileChooserParams.mode}"
+                                )
                                 setFilePathCallback(filePathCallback)
                                 openFileChooser()
                                 return true
@@ -308,7 +310,10 @@ class WebViewManager private constructor(
                 request.setTitle(URLUtil.guessFileName(url, contentDisposition, mimeType))
                 request.setDescription("Downloading file...")
                 request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, URLUtil.guessFileName(url, contentDisposition, mimeType))
+                request.setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS,
+                    URLUtil.guessFileName(url, contentDisposition, mimeType)
+                )
 
                 val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                 dm.enqueue(request)
@@ -319,15 +324,26 @@ class WebViewManager private constructor(
 
 
     fun loadHtmlContent(htmlContent: String, javaScriptChannelName: String?) {
-    // Load the HTML content into the WebView
-    webView?.loadDataWithBaseURL("file:///android_res/drawable/", htmlContent, "text/html", "UTF-8", null)
+        Log.d("CustomWebViewPlugin", "HTML content being loaded: $htmlContent")
+        webView = getOrCreateWebView()
+        if (htmlContent.isEmpty()) {
+            Log.e("CustomWebViewPlugin", "HTML content is empty!")
+            return
+        }
 
-    // If a JavaScript channel name is provided, bind it
-    if (!javaScriptChannelName.isNullOrEmpty()) {
-        addJavascriptChannel(javaScriptChannelName)
+        // Ensure JavaScript channel is added if specified
+        if (!javaScriptChannelName.isNullOrEmpty()) {
+            addJavascriptChannel(javaScriptChannelName)
+        }
+
+        // Load HTML content using loadDataWithBaseURL for better compatibility
+        webView?.loadData( htmlContent, "text/html", "UTF-8")
+
+        if (isWebViewPaused) {
+            resumeWebView()
+        }
     }
-        if (isWebViewPaused) resumeWebView()
-}
+
 
     fun loadURL(urlString: String, javaScriptChannelName: String?) {
         Log.d("CustomWebViewPlugin", "loadURL : $urlString")
