@@ -76,5 +76,18 @@ extension WebViewMoFlutter: WKNavigationDelegate {
         // handleLoadingError()
         delegate?.onPageLoadError()
     }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if let url = navigationAction.request.url {
+            // Check if the URL is a file link
+            if url.absoluteString.contains(".pdf") || url.absoluteString.contains("SH=") || url.isFileURL {
+                // Open the URL in an external browser
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                decisionHandler(.cancel) // Cancel the navigation in WebView
+                return
+            }
+        }
+        decisionHandler(.allow) // Allow navigation for other URLs
+    }
     
 }

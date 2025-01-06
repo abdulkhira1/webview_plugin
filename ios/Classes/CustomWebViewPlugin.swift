@@ -285,4 +285,35 @@ class WebViewManager: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMess
             delegate?.sendMessageBody(body: body)
         }
     }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if let url = navigationAction.request.url {
+            // Check if the URL is a file link
+            if url.absoluteString.contains(".pdf") || url.absoluteString.contains("SH=") || url.isFileURL {
+                // Open the URL in an external browser
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                decisionHandler(.cancel) // Cancel the navigation in WebView
+                return
+            }
+        }
+        decisionHandler(.allow) // Allow navigation for other URLs
+    }
+
+
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if let url = navigationAction.request.url {
+            print("NEW WINDOW CREATED with URL: \(url)")
+
+            // Create a new WKWebView with the provided configuration
+            let newWebView = WKWebView(frame: .zero, configuration: configuration)
+            newWebView.uiDelegate = self
+            newWebView.navigationDelegate = self
+
+            self.webView.load(URLRequest(url: url))
+
+            return newWebView
+        }
+        
+        return webView
+    }
 }
