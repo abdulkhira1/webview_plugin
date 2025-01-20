@@ -48,6 +48,9 @@ class WebViewMoFlutter: NSObject, FlutterPlatformView {
             // loadUrl()
         }
         self.webView.navigationDelegate = self
+       if #available(iOS 16.4,*) {
+           self.webView.isInspectable = true
+       }
     }
 
     func view() -> UIView {
@@ -89,5 +92,15 @@ extension WebViewMoFlutter: WKNavigationDelegate {
         }
         decisionHandler(.allow) // Allow navigation for other URLs
     }
+
+     func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+            // Bypass SSL certificate validation
+            if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
+                let credential = URLCredential(trust: challenge.protectionSpace.serverTrust!)
+                completionHandler(.useCredential, credential)
+            } else {
+                completionHandler(.performDefaultHandling, nil)
+            }
+        }
     
 }
