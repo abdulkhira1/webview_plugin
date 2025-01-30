@@ -171,8 +171,18 @@ class WebViewManager private constructor(
                         fileChooserParams: WebChromeClient.FileChooserParams
                     ): Boolean {
                         Log.d("CustomWebViewPlugin", "onShowFileChooser === ${fileChooserParams.mode}")
-                        setFilePathCallback(filePathCallback)
-                        openFileChooser()
+                        val acceptTypes = arrayOf(
+                            "application/pdf",  // PDF files
+                            "image/*",           // Image files (e.g., JPG, PNG)
+                            "video/*",           // Video files (e.g., MP4, MOV)
+                            "*/*"                // All file types (fallback for any other file types)
+                        )
+                        val mimeTypes = fileChooserParams.acceptTypes?.joinToString(",") ?: ""
+                        if (acceptTypes.contains(mimeTypes) && !mimeTypes.contains("text/vcard")) {
+                            setFilePathCallback(filePathCallback)
+                            openFileChooser()
+                        }
+
                         return true
                     }
 
@@ -236,8 +246,18 @@ class WebViewManager private constructor(
                                     "CustomWebViewPlugin",
                                     "onShowFileChooser === ${fileChooserParams.mode}"
                                 )
-                                setFilePathCallback(filePathCallback)
-                                openFileChooser()
+                                val acceptTypes = arrayOf(
+                                    "application/pdf",  // PDF files
+                                    "image/*",           // Image files (e.g., JPG, PNG)
+                                    "video/*",           // Video files (e.g., MP4, MOV)
+                                    "*/*"                // All file types (fallback for any other file types)
+                                )
+                                val mimeTypes = fileChooserParams.acceptTypes?.joinToString(",") ?: ""
+                                if (acceptTypes.contains(mimeTypes) && !mimeTypes.contains("text/vcard")) {
+                                    setFilePathCallback(filePathCallback)
+                                    openFileChooser()
+                                }
+
                                 return true
                             }
                         }
